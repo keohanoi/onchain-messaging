@@ -111,14 +111,20 @@ export async function computeGroupNullifier(
 export class SimpleMerkleTree {
   private leaves: bigint[] = [];
   private height: number;
-  private zeroHashes: bigint[];
+  private _zeroHashes: bigint[] | null = null;
 
   constructor(height: number = TREE_HEIGHT) {
     this.height = height;
-    this.zeroHashes = this.computeZeroHashes();
   }
 
-  private async computeZeroHashes(): Promise<bigint[]> {
+  /**
+   * Lazily compute zero hashes on first access
+   */
+  private async getZeroHashes(): Promise<bigint[]> {
+    if (this._zeroHashes !== null) {
+      return this._zeroHashes;
+    }
+
     const poseidon = await createPoseidonHasher();
     const zeros: bigint[] = [BigInt(0)];
 
@@ -126,6 +132,7 @@ export class SimpleMerkleTree {
       zeros.push(await poseidon([zeros[i], zeros[i]]));
     }
 
+    this._zeroHashes = zeros;
     return zeros;
   }
 
@@ -135,8 +142,10 @@ export class SimpleMerkleTree {
   }
 
   async getRoot(): Promise<bigint> {
+    const zeroHashes = await this.getZeroHashes();
+
     if (this.leaves.length === 0) {
-      return this.zeroHashes[this.height];
+      return zeroHashes[this.height];
     }
 
     const poseidon = await createPoseidonHasher();
@@ -147,7 +156,7 @@ export class SimpleMerkleTree {
 
       for (let j = 0; j < currentLevel.length; j += 2) {
         const left = currentLevel[j];
-        const right = currentLevel[j + 1] ?? this.zeroHashes[i];
+        const right = currentLevel[j + 1] ?? zeroHashes[i];
         nextLevel.push(await poseidon([left, right]));
       }
 
@@ -158,6 +167,7 @@ export class SimpleMerkleTree {
   }
 
   async getProof(index: number): Promise<MerkleProof> {
+    const zeroHashes = await this.getZeroHashes();
     const poseidon = await createPoseidonHasher();
     const pathElements: bigint[] = [];
     const pathIndices: number[] = [];
@@ -167,7 +177,7 @@ export class SimpleMerkleTree {
 
     for (let i = 0; i < this.height; i++) {
       const siblingIndex = currentIndex % 2 === 0 ? currentIndex + 1 : currentIndex - 1;
-      const sibling = currentLevel[siblingIndex] ?? this.zeroHashes[i];
+      const sibling = currentLevel[siblingIndex] ?? zeroHashes[i];
 
       pathElements.push(sibling);
       pathIndices.push(currentIndex % 2);
@@ -176,7 +186,7 @@ export class SimpleMerkleTree {
       const nextLevel: bigint[] = [];
       for (let j = 0; j < currentLevel.length; j += 2) {
         const left = currentLevel[j];
-        const right = currentLevel[j + 1] ?? this.zeroHashes[i];
+        const right = currentLevel[j + 1] ?? zeroHashes[i];
         nextLevel.push(await poseidon([left, right]));
       }
       currentLevel = nextLevel;
