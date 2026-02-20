@@ -52,6 +52,42 @@ function validatePublicKey(key: Uint8Array, context: string): void {
 }
 
 /**
+ * Verify the signed prekey signature using the identity key
+ * SECURITY: Per Signal X3DH spec, the initiator MUST verify the signed prekey signature
+ * @param identityKey The recipient's identity public key (verifying key)
+ * @param signedPreKey The signed prekey to verify
+ * @param signature The signature over the signed prekey
+ * @throws Error if signature verification fails
+ */
+function verifySignedPreKeySignature(
+  identityKey: Uint8Array,
+  signedPreKey: Uint8Array,
+  signature: Uint8Array
+): void {
+  try {
+    // Hash the signed prekey to get the message hash
+    const msgHash = Buffer.from(keccakHash(signedPreKey).slice(2), "hex");
+
+    // Verify the signature using the identity key
+    // Signature should be 64 bytes (r || s) for secp256k1
+    if (signature.length !== 64) {
+      throw new Error("Invalid signature length");
+    }
+
+    // Convert to noble format and verify
+    const valid = secp256k1.verify(signature, msgHash, identityKey);
+
+    if (!valid) {
+      throw new Error("Signature verification failed");
+    }
+  } catch (e) {
+    throw new Error(
+      `Signed prekey signature verification failed: ${e instanceof Error ? e.message : "unknown error"}`
+    );
+  }
+}
+
+/**
  * Derive HKDF salt from identity keys for domain separation
  * This provides key separation between different sessions
  */
@@ -75,6 +111,18 @@ export function x3dhInitiator(
   validatePublicKey(recipientBundle.signedPreKey, "recipient signed prekey");
   if (recipientBundle.oneTimePreKey) {
     validatePublicKey(recipientBundle.oneTimePreKey, "recipient one-time prekey");
+  }
+
+  // SECURITY: Verify signed prekey signature per Signal X3DH specification
+  // The initiator MUST verify that the signed prekey was actually signed by the recipient
+  if (recipientBundle.signedPreKeySignature) {
+    verifySignedPreKeySignature(
+      recipientBundle.identityKey,
+      recipientBundle.signedPreKey,
+      recipientBundle.signedPreKeySignature
+    );
+  } else {
+    throw new Error("Signed prekey signature is required");
   }
 
   const ephemeralPriv = new Uint8Array(secp256k1.utils.randomPrivateKey());

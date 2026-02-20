@@ -1,4 +1,6 @@
 import { secp256k1 } from '@noble/curves/secp256k1';
+import { keccak256 } from 'ethers';
+import { Buffer } from 'buffer';
 import { KeyPair, KeyBundle } from '../../src/types';
 
 /**
@@ -30,6 +32,19 @@ export function generateDeterministicKeyPair(seed: number): KeyPair {
 }
 
 /**
+ * Sign the signed prekey using the identity key
+ * Exported for use in tests that manually create bundles
+ */
+export function signPreKey(identityPrivateKey: Uint8Array, signedPreKey: Uint8Array): Uint8Array {
+  // Hash the signed prekey to get the message hash
+  const msgHash = Buffer.from(keccak256(signedPreKey).slice(2), "hex");
+  // Sign using noble/secp256k1
+  const signature = secp256k1.sign(msgHash, identityPrivateKey);
+  // Return 64-byte signature (r || s)
+  return signature.toCompactRawBytes();
+}
+
+/**
  * Generate a complete key bundle for testing
  */
 export function generateTestKeyBundle(includeOneTimePreKey = true): {
@@ -46,8 +61,8 @@ export function generateTestKeyBundle(includeOneTimePreKey = true): {
   const stealthSpendingKey = generateTestKeyPair();
   const stealthViewingKey = generateTestKeyPair();
 
-  // Create signature for signed prekey (simplified - in production would use proper signing)
-  const signedPreKeySignature = new Uint8Array(64);
+  // SECURITY FIX: Create proper signature for signed prekey using identity key
+  const signedPreKeySignature = signPreKey(identityKey.privateKey, signedPreKey.publicKey);
 
   const bundle: KeyBundle = {
     identityKey: identityKey.publicKey,

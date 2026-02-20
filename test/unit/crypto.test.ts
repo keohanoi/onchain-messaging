@@ -177,7 +177,7 @@ describe('crypto', () => {
       const shortKey = randomBytes(16);
 
       expect(() => aesGcmEncrypt(plaintext, shortKey)).toThrow(
-        'AES-256-GCM requires 32-byte key'
+        'Invalid key length'
       );
     });
 
@@ -186,7 +186,7 @@ describe('crypto', () => {
       const longKey = randomBytes(64);
 
       expect(() => aesGcmEncrypt(plaintext, longKey)).toThrow(
-        'AES-256-GCM requires 32-byte key'
+        'Invalid key length'
       );
     });
 

@@ -23,9 +23,9 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">83.38% </span>
+                <span class="strong">84.76% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>251/301</span>
+                <span class='fraction'>267/315</span>
             </div>
         
             
@@ -44,9 +44,9 @@
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">83.38% </span>
+                <span class="strong">84.76% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>251/301</span>
+                <span class='fraction'>267/315</span>
             </div>
         
             
@@ -364,7 +364,22 @@
 <a name='L299'></a><a href='#L299'>299</a>
 <a name='L300'></a><a href='#L300'>300</a>
 <a name='L301'></a><a href='#L301'>301</a>
-<a name='L302'></a><a href='#L302'>302</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
+<a name='L302'></a><a href='#L302'>302</a>
+<a name='L303'></a><a href='#L303'>303</a>
+<a name='L304'></a><a href='#L304'>304</a>
+<a name='L305'></a><a href='#L305'>305</a>
+<a name='L306'></a><a href='#L306'>306</a>
+<a name='L307'></a><a href='#L307'>307</a>
+<a name='L308'></a><a href='#L308'>308</a>
+<a name='L309'></a><a href='#L309'>309</a>
+<a name='L310'></a><a href='#L310'>310</a>
+<a name='L311'></a><a href='#L311'>311</a>
+<a name='L312'></a><a href='#L312'>312</a>
+<a name='L313'></a><a href='#L313'>313</a>
+<a name='L314'></a><a href='#L314'>314</a>
+<a name='L315'></a><a href='#L315'>315</a>
+<a name='L316'></a><a href='#L316'>316</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
@@ -577,6 +592,7 @@
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -614,8 +630,12 @@
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -657,6 +677,14 @@
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">10x</span>
+<span class="cline-any cline-yes">10x</span>
+<span class="cline-any cline-yes">10x</span>
+<span class="cline-any cline-yes">10x</span>
+<span class="cline-any cline-yes">10x</span>
+<span class="cline-any cline-yes">10x</span>
+<span class="cline-any cline-yes">10x</span>
 <span class="cline-any cline-yes">10x</span>
 <span class="cline-any cline-yes">10x</span>
 <span class="cline-any cline-yes">10x</span>
@@ -673,7 +701,8 @@
  */
 &nbsp;
 import { createPoseidonHasher } from "./poseidon";
-import { keccakHash } from "./crypto";
+import { keccakHash, hexFromBytes } from "./crypto";
+import { AbiCoder } from "ethers";
 &nbsp;
 // Tree height for merkle proofs
 export const TREE_HEIGHT = 20;
@@ -871,18 +900,26 @@ export class SimpleMerkleTree {
 /**
  * Generate a ZK proof for anonymous sender
  *
- * NOTE: This is a placeholder. In production, use snarkjs to generate
- * actual Groth16 proofs from the compiled circuits.
+ * SECURITY: This function requires snarkjs and compiled circuits.
+ * The wasmPath and zkeyPath parameters are required for proof generation.
  *
  * @param inputs The proof inputs
- * @param wasmPath Path to the compiled circuit WASM
- * @param zkeyPath Path to the proving key
+ * @param wasmPath Path to the compiled circuit WASM (required)
+ * @param zkeyPath Path to the proving key (required)
+ * @throws Error if wasmPath or zkeyPath are not provided
  */
 <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >export async function generateAnonymousSenderProof(</span></span>
 <span class="cstat-no" title="statement not covered" >  inputs: AnonymousSenderInputs,</span>
-<span class="cstat-no" title="statement not covered" >  _wasmPath?: string,</span>
-<span class="cstat-no" title="statement not covered" >  _zkeyPath?: string</span>
+<span class="cstat-no" title="statement not covered" >  wasmPath?: string,</span>
+<span class="cstat-no" title="statement not covered" >  zkeyPath?: string</span>
 <span class="cstat-no" title="statement not covered" >): Promise&lt;ZKProof&gt; {</span>
+<span class="cstat-no" title="statement not covered" >  if (!wasmPath || !zkeyPath) {</span>
+<span class="cstat-no" title="statement not covered" >    throw new Error(</span>
+<span class="cstat-no" title="statement not covered" >      "ZK proof generation requires wasmPath and zkeyPath. " +</span>
+<span class="cstat-no" title="statement not covered" >      "Install snarkjs and provide paths to compiled circuits."</span>
+<span class="cstat-no" title="statement not covered" >    );</span>
+<span class="cstat-no" title="statement not covered" >  }</span>
+<span class="cstat-no" title="statement not covered" ></span>
 <span class="cstat-no" title="statement not covered" >  // In production, use snarkjs:</span>
 <span class="cstat-no" title="statement not covered" >  // const { proof, publicSignals } = await snarkjs.groth16.fullProve(</span>
 <span class="cstat-no" title="statement not covered" >  //   {</span>
@@ -897,42 +934,39 @@ export class SimpleMerkleTree {
 <span class="cstat-no" title="statement not covered" >  //   zkeyPath</span>
 <span class="cstat-no" title="statement not covered" >  // );</span>
 <span class="cstat-no" title="statement not covered" ></span>
-<span class="cstat-no" title="statement not covered" >  // Placeholder: return dummy proof</span>
-<span class="cstat-no" title="statement not covered" >  // This should be replaced with actual proof generation</span>
-<span class="cstat-no" title="statement not covered" >  const poseidon = await createPoseidonHasher();</span>
-<span class="cstat-no" title="statement not covered" >  const nullifier = await poseidon([inputs.identityNullifier, inputs.merkleRoot]);</span>
-<span class="cstat-no" title="statement not covered" ></span>
-<span class="cstat-no" title="statement not covered" >  return {</span>
-<span class="cstat-no" title="statement not covered" >    proofA: [BigInt(0), BigInt(0)],</span>
-<span class="cstat-no" title="statement not covered" >    proofB: [[BigInt(0), BigInt(0)], [BigInt(0), BigInt(0)]],</span>
-<span class="cstat-no" title="statement not covered" >    proofC: [BigInt(0), BigInt(0)],</span>
-<span class="cstat-no" title="statement not covered" >    publicInputs: [nullifier, inputs.merkleRoot, inputs.messageHash]</span>
-<span class="cstat-no" title="statement not covered" >  };</span>
+<span class="cstat-no" title="statement not covered" >  // For now, throw error - proof generation requires snarkjs integration</span>
+<span class="cstat-no" title="statement not covered" >  throw new Error(</span>
+<span class="cstat-no" title="statement not covered" >    "ZK proof generation not implemented. Integrate snarkjs for production use."</span>
+<span class="cstat-no" title="statement not covered" >  );</span>
 <span class="cstat-no" title="statement not covered" >}</span>
 &nbsp;
 /**
  * Generate a ZK proof for group membership
  *
- * NOTE: This is a placeholder. In production, use snarkjs.
+ * SECURITY: This function requires snarkjs and compiled circuits.
+ * The wasmPath and zkeyPath parameters are required for proof generation.
+ *
+ * @param inputs The proof inputs
+ * @param wasmPath Path to the compiled circuit WASM (required)
+ * @param zkeyPath Path to the proving key (required)
+ * @throws Error if wasmPath or zkeyPath are not provided
  */
 <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >export async function generateGroupMemberProof(</span></span>
 <span class="cstat-no" title="statement not covered" >  inputs: GroupMemberInputs,</span>
-<span class="cstat-no" title="statement not covered" >  _wasmPath?: string,</span>
-<span class="cstat-no" title="statement not covered" >  _zkeyPath?: string</span>
+<span class="cstat-no" title="statement not covered" >  wasmPath?: string,</span>
+<span class="cstat-no" title="statement not covered" >  zkeyPath?: string</span>
 <span class="cstat-no" title="statement not covered" >): Promise&lt;ZKProof&gt; {</span>
-<span class="cstat-no" title="statement not covered" >  const poseidon = await createPoseidonHasher();</span>
-<span class="cstat-no" title="statement not covered" >  const nullifier = await computeGroupNullifier(</span>
-<span class="cstat-no" title="statement not covered" >    inputs.identityNullifier,</span>
-<span class="cstat-no" title="statement not covered" >    inputs.groupId,</span>
-<span class="cstat-no" title="statement not covered" >    inputs.epoch</span>
-<span class="cstat-no" title="statement not covered" >  );</span>
+<span class="cstat-no" title="statement not covered" >  if (!wasmPath || !zkeyPath) {</span>
+<span class="cstat-no" title="statement not covered" >    throw new Error(</span>
+<span class="cstat-no" title="statement not covered" >      "ZK proof generation requires wasmPath and zkeyPath. " +</span>
+<span class="cstat-no" title="statement not covered" >      "Install snarkjs and provide paths to compiled circuits."</span>
+<span class="cstat-no" title="statement not covered" >    );</span>
+<span class="cstat-no" title="statement not covered" >  }</span>
 <span class="cstat-no" title="statement not covered" ></span>
-<span class="cstat-no" title="statement not covered" >  return {</span>
-<span class="cstat-no" title="statement not covered" >    proofA: [BigInt(0), BigInt(0)],</span>
-<span class="cstat-no" title="statement not covered" >    proofB: [[BigInt(0), BigInt(0)], [BigInt(0), BigInt(0)]],</span>
-<span class="cstat-no" title="statement not covered" >    proofC: [BigInt(0), BigInt(0)],</span>
-<span class="cstat-no" title="statement not covered" >    publicInputs: [nullifier, inputs.groupId, inputs.merkleRoot, inputs.epoch]</span>
-<span class="cstat-no" title="statement not covered" >  };</span>
+<span class="cstat-no" title="statement not covered" >  // For now, throw error - proof generation requires snarkjs integration</span>
+<span class="cstat-no" title="statement not covered" >  throw new Error(</span>
+<span class="cstat-no" title="statement not covered" >    "ZK proof generation not implemented. Integrate snarkjs for production use."</span>
+<span class="cstat-no" title="statement not covered" >  );</span>
 <span class="cstat-no" title="statement not covered" >}</span>
 &nbsp;
 /**
@@ -957,13 +991,21 @@ export function formatProofForContract(proof: ZKProof): {
 &nbsp;
 /**
  * Compute message hash for ZK proof
+ * Uses ABI encoding to prevent collision attacks from simple string concatenation
  */
 export async function computeMessageHash(
   contentCid: string,
   recipientStealth: string,
   timestamp: number
 ): Promise&lt;bigint&gt; {
-  const hash = keccakHash(`${contentCid}:${recipientStealth}:${timestamp}`);
+  // Use ABI encoding for proper domain separation and collision resistance
+  // This ensures "a:b:c" cannot collide with parsed components
+  const abiCoder = AbiCoder.defaultAbiCoder();
+  const encoded = abiCoder.encode(
+    ["string", "address", "uint256"],
+    [contentCid, recipientStealth, timestamp]
+  );
+  const hash = keccakHash(Buffer.from(encoded.slice(2), "hex"));
   return BigInt(hash);
 }
 &nbsp;</pre></td></tr></table></pre>
@@ -973,7 +1015,7 @@ export async function computeMessageHash(
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-02-20T17:27:32.752Z
+                at 2026-02-20T17:53:55.892Z
             </div>
         <script src="prettify.js"></script>
         <script>

@@ -1,9 +1,12 @@
 import { secp256k1 } from "@noble/curves/secp256k1";
-import { aesGcmDecrypt, aesGcmEncrypt, hkdfSha256, fromBase64, hmacSha256, toBase64 } from "./crypto";
+import { aesGcmDecrypt, aesGcmEncrypt, hkdfSha256, keccakHash, fromBase64, hmacSha256, toBase64 } from "./crypto";
 import { KeyPair, RatchetHeader, RatchetState } from "./types";
 
 // Maximum number of skipped message keys to cache
 const MAX_SKIP = 1000;
+
+// Auto-pruning threshold for skipped keys
+const MAX_SKIPPED_KEYS = 500;
 
 // MEDIUM FIX #2: Use byte values for domain separation (Signal Protocol spec)
 // Signal uses 0x01, 0x02 rather than string constants
@@ -49,10 +52,18 @@ function kdfRoot(rootKey: Uint8Array, dhOut: Uint8Array): { newRootKey: Uint8Arr
 }
 
 export function initRatchet(sessionKey: Uint8Array, dhPair: KeyPair): RatchetState {
+  // SECURITY FIX: Derive a proper salt from the session key instead of using empty salt
+  // This provides domain separation and prevents related-key attacks
+  const saltInput = Buffer.concat([
+    new TextEncoder().encode("POMP_RATCHET_SALT"),
+    dhPair.publicKey
+  ]);
+  const salt = Buffer.from(keccakHash(saltInput).slice(2), "hex");
+
   // Derive initial chain keys using HKDF for proper key separation
   const derived = hkdfSha256(
     sessionKey,
-    new Uint8Array(32),
+    salt,
     new TextEncoder().encode("POMP_INIT"),
     64
   );
@@ -73,8 +84,19 @@ export function initRatchet(sessionKey: Uint8Array, dhPair: KeyPair): RatchetSta
 
 export function dhRatchet(state: RatchetState, theirDhPub: Uint8Array): RatchetState {
   const dhOut = secp256k1.getSharedSecret(state.dhPair.privateKey, theirDhPub, true);
-  // MEDIUM FIX #1: Use new kdfRoot that returns both keys
-  const { newRootKey, newChainKey } = kdfRoot(state.rootKey, dhOut);
+
+  // SECURITY FIX: Derive separate send and receive chain keys
+  // Per Signal Protocol, each party derives independent chain keys
+  const derived = hkdfSha256(
+    dhOut,
+    state.rootKey,
+    new TextEncoder().encode("POMP_DH_RATCHET"),
+    96  // 32 for root key, 32 for send chain, 32 for recv chain
+  );
+
+  const newRootKey = derived.slice(0, 32);
+  const newSendChainKey = derived.slice(32, 64);
+  const newRecvChainKey = derived.slice(64, 96);
 
   const newPriv = new Uint8Array(secp256k1.utils.randomPrivateKey());
   const newDhPair: KeyPair = {
@@ -84,8 +106,8 @@ export function dhRatchet(state: RatchetState, theirDhPub: Uint8Array): RatchetS
 
   return {
     rootKey: newRootKey,
-    sendChainKey: newChainKey,  // Use derived chain key
-    recvChainKey: newChainKey,  // Same chain key base, will diverge on use
+    sendChainKey: newSendChainKey,
+    recvChainKey: newRecvChainKey,
     dhPair: newDhPair,
     theirDhPub,
     sendCount: 0,
@@ -252,6 +274,11 @@ export function ratchetDecrypt(
     skippedKeys,
     version: (workingState.version ?? 0) + 1
   };
+
+  // SECURITY FIX: Auto-prune skipped keys to prevent memory exhaustion
+  if (newState.skippedKeys && newState.skippedKeys.length > MAX_SKIPPED_KEYS) {
+    newState.skippedKeys = newState.skippedKeys.slice(-MAX_SKIPPED_KEYS);
+  }
 
   return { plaintext, state: newState };
 }

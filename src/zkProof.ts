@@ -6,7 +6,8 @@
  */
 
 import { createPoseidonHasher } from "./poseidon";
-import { keccakHash } from "./crypto";
+import { keccakHash, hexFromBytes } from "./crypto";
+import { AbiCoder } from "ethers";
 
 // Tree height for merkle proofs
 export const TREE_HEIGHT = 20;
@@ -204,18 +205,26 @@ export class SimpleMerkleTree {
 /**
  * Generate a ZK proof for anonymous sender
  *
- * NOTE: This is a placeholder. In production, use snarkjs to generate
- * actual Groth16 proofs from the compiled circuits.
+ * SECURITY: This function requires snarkjs and compiled circuits.
+ * The wasmPath and zkeyPath parameters are required for proof generation.
  *
  * @param inputs The proof inputs
- * @param wasmPath Path to the compiled circuit WASM
- * @param zkeyPath Path to the proving key
+ * @param wasmPath Path to the compiled circuit WASM (required)
+ * @param zkeyPath Path to the proving key (required)
+ * @throws Error if wasmPath or zkeyPath are not provided
  */
 export async function generateAnonymousSenderProof(
   inputs: AnonymousSenderInputs,
-  _wasmPath?: string,
-  _zkeyPath?: string
+  wasmPath?: string,
+  zkeyPath?: string
 ): Promise<ZKProof> {
+  if (!wasmPath || !zkeyPath) {
+    throw new Error(
+      "ZK proof generation requires wasmPath and zkeyPath. " +
+      "Install snarkjs and provide paths to compiled circuits."
+    );
+  }
+
   // In production, use snarkjs:
   // const { proof, publicSignals } = await snarkjs.groth16.fullProve(
   //   {
@@ -230,42 +239,39 @@ export async function generateAnonymousSenderProof(
   //   zkeyPath
   // );
 
-  // Placeholder: return dummy proof
-  // This should be replaced with actual proof generation
-  const poseidon = await createPoseidonHasher();
-  const nullifier = await poseidon([inputs.identityNullifier, inputs.merkleRoot]);
-
-  return {
-    proofA: [BigInt(0), BigInt(0)],
-    proofB: [[BigInt(0), BigInt(0)], [BigInt(0), BigInt(0)]],
-    proofC: [BigInt(0), BigInt(0)],
-    publicInputs: [nullifier, inputs.merkleRoot, inputs.messageHash]
-  };
+  // For now, throw error - proof generation requires snarkjs integration
+  throw new Error(
+    "ZK proof generation not implemented. Integrate snarkjs for production use."
+  );
 }
 
 /**
  * Generate a ZK proof for group membership
  *
- * NOTE: This is a placeholder. In production, use snarkjs.
+ * SECURITY: This function requires snarkjs and compiled circuits.
+ * The wasmPath and zkeyPath parameters are required for proof generation.
+ *
+ * @param inputs The proof inputs
+ * @param wasmPath Path to the compiled circuit WASM (required)
+ * @param zkeyPath Path to the proving key (required)
+ * @throws Error if wasmPath or zkeyPath are not provided
  */
 export async function generateGroupMemberProof(
   inputs: GroupMemberInputs,
-  _wasmPath?: string,
-  _zkeyPath?: string
+  wasmPath?: string,
+  zkeyPath?: string
 ): Promise<ZKProof> {
-  const poseidon = await createPoseidonHasher();
-  const nullifier = await computeGroupNullifier(
-    inputs.identityNullifier,
-    inputs.groupId,
-    inputs.epoch
-  );
+  if (!wasmPath || !zkeyPath) {
+    throw new Error(
+      "ZK proof generation requires wasmPath and zkeyPath. " +
+      "Install snarkjs and provide paths to compiled circuits."
+    );
+  }
 
-  return {
-    proofA: [BigInt(0), BigInt(0)],
-    proofB: [[BigInt(0), BigInt(0)], [BigInt(0), BigInt(0)]],
-    proofC: [BigInt(0), BigInt(0)],
-    publicInputs: [nullifier, inputs.groupId, inputs.merkleRoot, inputs.epoch]
-  };
+  // For now, throw error - proof generation requires snarkjs integration
+  throw new Error(
+    "ZK proof generation not implemented. Integrate snarkjs for production use."
+  );
 }
 
 /**
@@ -290,12 +296,20 @@ export function formatProofForContract(proof: ZKProof): {
 
 /**
  * Compute message hash for ZK proof
+ * Uses ABI encoding to prevent collision attacks from simple string concatenation
  */
 export async function computeMessageHash(
   contentCid: string,
   recipientStealth: string,
   timestamp: number
 ): Promise<bigint> {
-  const hash = keccakHash(`${contentCid}:${recipientStealth}:${timestamp}`);
+  // Use ABI encoding for proper domain separation and collision resistance
+  // This ensures "a:b:c" cannot collide with parsed components
+  const abiCoder = AbiCoder.defaultAbiCoder();
+  const encoded = abiCoder.encode(
+    ["string", "address", "uint256"],
+    [contentCid, recipientStealth, timestamp]
+  );
+  const hash = keccakHash(Buffer.from(encoded.slice(2), "hex"));
   return BigInt(hash);
 }

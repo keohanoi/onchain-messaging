@@ -122,12 +122,12 @@ describe('stealth', () => {
 
     it('should throw on invalid ephemeral key length', () => {
       const viewingPrivKey = new Uint8Array(32).fill(1);
-      const spendingPubKey = new Uint8Array(33).fill(2);
+      const spendingPubKey = generateKeyPair().publicKey;
       const invalidEphemeralKey = new Uint8Array(32); // Should be 33
 
       expect(() =>
         deriveStealthFromEphemeral(invalidEphemeralKey, viewingPrivKey, spendingPubKey)
-      ).toThrow('Invalid ephemeral key length: expected 33, got 32');
+      ).toThrow('Invalid ephemeral public key');
     });
 
     it('should compute correct view tag', () => {

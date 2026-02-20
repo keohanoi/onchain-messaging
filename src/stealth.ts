@@ -10,6 +10,22 @@ export interface StealthDerivation {
 }
 
 /**
+ * Validate that a public key is a valid point on secp256k1
+ * SECURITY FIX: Added validation to prevent invalid key attacks
+ */
+function validatePublicKey(key: Uint8Array, context: string): void {
+  if (key.length !== 33) {
+    throw new Error(`Invalid ${context}: expected 33 bytes, got ${key.length}`);
+  }
+  try {
+    const point = secp256k1.ProjectivePoint.fromHex(key);
+    point.assertValidity();
+  } catch {
+    throw new Error(`Invalid ${context}: not a valid curve point`);
+  }
+}
+
+/**
  * Hash shared secret to a scalar value using keccak256
  * HIGH FIX #3: Use proper cryptographic hashing before reduction
  * This follows ERC-5564 recommendation for hash-to-scalar
@@ -48,6 +64,10 @@ export function deriveStealthAddress(
   recipientViewingPubKey: Uint8Array,
   recipientSpendingPubKey: Uint8Array
 ): StealthDerivation {
+  // SECURITY FIX: Validate public keys before use
+  validatePublicKey(recipientViewingPubKey, "viewing public key");
+  validatePublicKey(recipientSpendingPubKey, "spending public key");
+
   // Generate ephemeral key pair
   const ephemeralPrivKey = new Uint8Array(secp256k1.utils.randomPrivateKey());
   const ephemeralPubKey = secp256k1.getPublicKey(ephemeralPrivKey, true); // 33 bytes compressed
@@ -85,10 +105,9 @@ export function deriveStealthFromEphemeral(
   recipientViewingPrivKey: Uint8Array,
   recipientSpendingPubKey: Uint8Array
 ): { stealthAddress: string; sharedSecret: Uint8Array; viewTag: number } {
-  // Ensure ephemeral key is 33 bytes
-  if (ephemeralPubKey.length !== 33) {
-    throw new Error(`Invalid ephemeral key length: expected 33, got ${ephemeralPubKey.length}`);
-  }
+  // SECURITY FIX: Validate all public keys
+  validatePublicKey(ephemeralPubKey, "ephemeral public key");
+  validatePublicKey(recipientSpendingPubKey, "spending public key");
 
   // Compute ECDH shared secret
   const sharedSecret = secp256k1.getSharedSecret(

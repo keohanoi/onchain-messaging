@@ -3,7 +3,8 @@ import { secp256k1 } from '@noble/curves/secp256k1';
 import { x3dhInitiator, x3dhResponder, X3DHResponderInput } from '../../src/x3dh';
 import {
   generateTestKeyPair,
-  generateTestKeyBundle
+  generateTestKeyBundle,
+  signPreKey
 } from '../fixtures/keys';
 import { createMockPQEncapsulate } from '../fixtures/mocks';
 
@@ -99,11 +100,11 @@ describe('x3dh', () => {
       const recipientIdentity = generateTestKeyPair();
       const recipientSignedPreKey = generateTestKeyPair();
 
-      // Create recipient bundle
+      // Create recipient bundle with proper signature
       const recipientBundle = {
         identityKey: recipientIdentity.publicKey,
         signedPreKey: recipientSignedPreKey.publicKey,
-        signedPreKeySignature: new Uint8Array(64),
+        signedPreKeySignature: signPreKey(recipientIdentity.privateKey, recipientSignedPreKey.publicKey),
         stealthSpendingPubKey: new Uint8Array(33),
         stealthViewingPubKey: new Uint8Array(33)
       };
@@ -135,7 +136,7 @@ describe('x3dh', () => {
       const recipientBundle = {
         identityKey: recipientIdentity.publicKey,
         signedPreKey: recipientSignedPreKey.publicKey,
-        signedPreKeySignature: new Uint8Array(64),
+        signedPreKeySignature: signPreKey(recipientIdentity.privateKey, recipientSignedPreKey.publicKey),
         oneTimePreKey: recipientOneTimePreKey.publicKey,
         oneTimePreKeyIndex: 0,
         stealthSpendingPubKey: new Uint8Array(33),
@@ -194,7 +195,7 @@ describe('x3dh', () => {
       const recipientBundle = {
         identityKey: recipientIdentity.publicKey,
         signedPreKey: recipientSignedPreKey.publicKey,
-        signedPreKeySignature: new Uint8Array(64),
+        signedPreKeySignature: signPreKey(recipientIdentity.privateKey, recipientSignedPreKey.publicKey),
         stealthSpendingPubKey: new Uint8Array(33),
         stealthViewingPubKey: new Uint8Array(33),
         pqPublicKey: new Uint8Array(32).fill(1)
@@ -231,7 +232,7 @@ describe('x3dh', () => {
       const recipientBundle = {
         identityKey: recipientIdentity.publicKey,
         signedPreKey: recipientSignedPreKey.publicKey,
-        signedPreKeySignature: new Uint8Array(64),
+        signedPreKeySignature: signPreKey(recipientIdentity.privateKey, recipientSignedPreKey.publicKey),
         stealthSpendingPubKey: new Uint8Array(33),
         stealthViewingPubKey: new Uint8Array(33)
       };
@@ -254,7 +255,7 @@ describe('x3dh', () => {
       const bundle = {
         identityKey: recipient.publicKey,
         signedPreKey: signedPreKey.publicKey,
-        signedPreKeySignature: new Uint8Array(64),
+        signedPreKeySignature: signPreKey(recipient.privateKey, signedPreKey.publicKey),
         stealthSpendingPubKey: new Uint8Array(33),
         stealthViewingPubKey: new Uint8Array(33)
       };

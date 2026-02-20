@@ -40,7 +40,7 @@ export function aesGcmEncrypt(
 ): { ciphertext: Uint8Array; iv: Uint8Array; tag: Uint8Array } {
   // SECURITY FIX: Validate key length for AES-256
   if (key.length !== 32) {
-    throw new Error(`AES-256-GCM requires 32-byte key, got ${key.length} bytes`);
+    throw new Error("Invalid key length");
   }
 
   const iv = crypto.randomBytes(12);
@@ -59,7 +59,7 @@ export function aesGcmEncrypt(
 /**
  * AES-GCM decryption with optional Additional Authenticated Data (AAD)
  * HIGH FIX #4: Added AAD support for message integrity
- * SECURITY FIX: Added key length validation
+ * SECURITY FIX: Added key length and tag validation
  */
 export function aesGcmDecrypt(
   ciphertext: Uint8Array,
@@ -70,7 +70,17 @@ export function aesGcmDecrypt(
 ): Uint8Array {
   // SECURITY FIX: Validate key length for AES-256
   if (key.length !== 32) {
-    throw new Error(`AES-256-GCM requires 32-byte key, got ${key.length} bytes`);
+    throw new Error("Invalid key length");
+  }
+
+  // SECURITY FIX: Validate auth tag length (16 bytes for AES-GCM)
+  if (tag.length !== 16) {
+    throw new Error("Invalid authentication tag");
+  }
+
+  // SECURITY FIX: Validate IV length (12 bytes recommended for GCM)
+  if (iv.length !== 12) {
+    throw new Error("Invalid IV length");
   }
 
   const decipher = crypto.createDecipheriv("aes-256-gcm", key, iv);
