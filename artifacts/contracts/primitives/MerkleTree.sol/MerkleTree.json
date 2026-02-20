@@ -1,0 +1,10 @@
+{
+  "_format": "hh-sol-artifact-1",
+  "contractName": "MerkleTree",
+  "sourceName": "contracts/primitives/MerkleTree.sol",
+  "abi": [],
+  "bytecode": "0x60808060405234601757603a9081601d823930815050f35b600080fdfe600080fdfea2646970667358221220bf7d5eea40142e105f1bb67937f436cbd4448479b6505167da9a708cc74b885564736f6c63430008140033",
+  "deployedBytecode": "0x600080fdfea2646970667358221220bf7d5eea40142e105f1bb67937f436cbd4448479b6505167da9a708cc74b885564736f6c63430008140033",
+  "linkReferences": {},
+  "deployedLinkReferences": {}
+}

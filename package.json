@@ -1,0 +1,31 @@
+{
+  "name": "onchain-msg",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "lint": "eslint \"src/**/*.ts\"",
+    "typecheck": "tsc --noEmit",
+    "test": "hardhat test",
+    "build": "tsc"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^4.0.0",
+    "@types/mocha": "^10.0.6",
+    "@types/node": "^20.11.19",
+    "@typescript-eslint/eslint-plugin": "^7.0.2",
+    "@typescript-eslint/parser": "^7.0.2",
+    "eslint": "^8.56.0",
+    "hardhat": "^2.22.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
+  },
+  "dependencies": {
+    "@noble/curves": "^1.3.0",
+    "@noble/hashes": "^1.3.3",
+    "@openzeppelin/contracts": "^5.0.2",
+    "arweave": "^1.15.5",
+    "circomlibjs": "^0.1.7",
+    "ethers": "^6.11.1",
+    "ipfs-http-client": "^60.0.1"
+  }
+}

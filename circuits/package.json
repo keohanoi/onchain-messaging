@@ -1,0 +1,26 @@
+{
+  "name": "pomp-circuits",
+  "version": "1.0.0",
+  "description": "ZK circuits for Private Onchain Messaging Protocol",
+  "scripts": {
+    "compile:sender": "circom circuits/AnonymousSender.circom --r1cs --wasm --sym -o build",
+    "compile:group": "circom circuits/GroupMember.circom --r1cs --wasm --sym -o build",
+    "compile:all": "npm run compile:sender && npm run compile:group",
+    "setup": "snarkjs groth16 setup build/AnonymousSender.r1cs pot.ptau build/AnonymousSender_0000.zkey",
+    "setup:group": "snarkjs groth16 setup build/GroupMember.r1cs pot.ptau build/GroupMember_0000.zkey",
+    "export:vkey": "snarkjs zkey export verificationkey build/AnonymousSender_final.zkey build/AnonymousSender_vkey.json",
+    "export:vkey:group": "snarkjs zkey export verificationkey build/GroupMember_final.zkey build/GroupMember_vkey.json",
+    "export:sol": "snarkjs zkey export solidityverifier build/AnonymousSender_final.zkey build/AnonymousSenderVerifier.sol",
+    "test": "mocha test/*.test.js"
+  },
+  "dependencies": {
+    "circomlib": "^2.0.5",
+    "circomlibjs": "^0.1.7"
+  },
+  "devDependencies": {
+    "circom": "^2.1.0",
+    "snarkjs": "^0.7.0",
+    "chai": "^4.3.7",
+    "mocha": "^10.2.0"
+  }
+}
