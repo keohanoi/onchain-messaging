@@ -1,0 +1,409 @@
+/* POMP - Private Onchain Messaging Protocol */
+/* Retro-Future Terminal Aesthetic */
+
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Share+Tech+Mono&display=swap');
+
+:root {
+  /* Phosphor Colors - Amber & Green Terminal */
+  --phosphor-primary: #00ff41;
+  --phosphor-secondary: #00cc33;
+  --phosphor-dim: #004d14;
+  --phosphor-glow: rgba(0, 255, 65, 0.6);
+
+  --amber-primary: #ffb000;
+  --amber-secondary: #cc8800;
+  --amber-dim: #4d3500;
+  --amber-glow: rgba(255, 176, 0, 0.6);
+
+  /* CRT Screen Colors */
+  --screen-bg: #0a0a0a;
+  --screen-surface: #0d1117;
+  --screen-border: #1a1a2e;
+
+  /* Accent Colors */
+  --accent-red: #ff3366;
+  --accent-cyan: #00ffff;
+  --accent-magenta: #ff00ff;
+
+  /* Text */
+  --text-primary: #e0e0e0;
+  --text-secondary: #888888;
+  --text-dim: #444444;
+
+  /* Functional */
+  --success: #00ff41;
+  --warning: #ffb000;
+  --error: #ff3366;
+  --info: #00ffff;
+
+  /* Scanline */
+  --scanline-color: rgba(0, 0, 0, 0.15);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: var(--screen-bg);
+  color: var(--text-primary);
+  font-family: 'IBM Plex Mono', monospace;
+  overflow: hidden;
+}
+
+/* CRT Screen Effect Container */
+.crt-screen {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: var(--screen-surface);
+  overflow: hidden;
+}
+
+/* Scanlines Overlay */
+.crt-screen::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    var(--scanline-color) 2px,
+    var(--scanline-color) 4px
+  );
+  pointer-events: none;
+  z-index: 1000;
+}
+
+/* CRT Flicker Animation */
+.crt-screen::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(10, 10, 10, 0.1);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 999;
+  animation: crt-flicker 0.15s infinite;
+}
+
+@keyframes crt-flicker {
+  0% { opacity: 0.27861; }
+  5% { opacity: 0.34769; }
+  10% { opacity: 0.23604; }
+  15% { opacity: 0.90626; }
+  20% { opacity: 0.18128; }
+  25% { opacity: 0.83891; }
+  30% { opacity: 0.65583; }
+  35% { opacity: 0.67807; }
+  40% { opacity: 0.26559; }
+  45% { opacity: 0.84693; }
+  50% { opacity: 0.96019; }
+  55% { opacity: 0.08594; }
+  60% { opacity: 0.20313; }
+  65% { opacity: 0.71988; }
+  70% { opacity: 0.53455; }
+  75% { opacity: 0.37288; }
+  80% { opacity: 0.71428; }
+  85% { opacity: 0.70419; }
+  90% { opacity: 0.7003; }
+  95% { opacity: 0.36108; }
+  100% { opacity: 0.24387; }
+}
+
+/* Screen Curve Effect */
+.screen-curve {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  box-shadow:
+    inset 0 0 100px rgba(0, 0, 0, 0.5),
+    inset 0 0 50px rgba(0, 255, 65, 0.02);
+  border-radius: 8px;
+  pointer-events: none;
+  z-index: 998;
+}
+
+/* Typography */
+.mono {
+  font-family: 'Share Tech Mono', monospace;
+}
+
+.glow-text {
+  text-shadow:
+    0 0 5px var(--phosphor-glow),
+    0 0 10px var(--phosphor-glow),
+    0 0 20px var(--phosphor-glow);
+}
+
+.glow-text-amber {
+  text-shadow:
+    0 0 5px var(--amber-glow),
+    0 0 10px var(--amber-glow),
+    0 0 20px var(--amber-glow);
+}
+
+/* Hex Display */
+.hex-display {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px;
+  color: var(--phosphor-secondary);
+  word-break: break-all;
+  opacity: 0.8;
+}
+
+/* Terminal Window */
+.terminal-window {
+  background: var(--screen-surface);
+  border: 1px solid var(--screen-border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.terminal-header {
+  background: linear-gradient(180deg, #1a1a2e 0%, #0d0d1a 100%);
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid var(--screen-border);
+}
+
+.terminal-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.terminal-dot.red { background: #ff5f56; }
+.terminal-dot.yellow { background: #ffbd2e; }
+.terminal-dot.green { background: #27c93f; }
+
+.terminal-title {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-left: 8px;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--screen-bg);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--phosphor-dim);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--phosphor-secondary);
+}
+
+/* Status Indicators */
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.status-dot.online {
+  background: var(--success);
+  box-shadow: 0 0 6px var(--success);
+}
+
+.status-dot.offline {
+  background: var(--text-dim);
+}
+
+.status-dot.encrypting {
+  background: var(--amber-primary);
+  box-shadow: 0 0 6px var(--amber-primary);
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* Buttons */
+.btn-terminal {
+  background: transparent;
+  border: 1px solid var(--phosphor-secondary);
+  color: var(--phosphor-primary);
+  padding: 8px 16px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.btn-terminal:hover {
+  background: var(--phosphor-dim);
+  box-shadow: 0 0 10px var(--phosphor-glow);
+}
+
+.btn-terminal:active {
+  transform: translateY(1px);
+}
+
+.btn-terminal.primary {
+  background: var(--phosphor-dim);
+  border-color: var(--phosphor-primary);
+}
+
+.btn-terminal.amber {
+  border-color: var(--amber-secondary);
+  color: var(--amber-primary);
+}
+
+.btn-terminal.amber:hover {
+  background: var(--amber-dim);
+  box-shadow: 0 0 10px var(--amber-glow);
+}
+
+/* Input Fields */
+.input-terminal {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--screen-border);
+  color: var(--phosphor-primary);
+  padding: 10px 14px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 13px;
+  width: 100%;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.input-terminal:focus {
+  border-color: var(--phosphor-secondary);
+  box-shadow: 0 0 10px rgba(0, 255, 65, 0.1);
+}
+
+.input-terminal::placeholder {
+  color: var(--text-dim);
+}
+
+/* Tech Readout */
+.tech-readout {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px;
+  color: var(--text-secondary);
+  background: rgba(0, 0, 0, 0.4);
+  padding: 8px 12px;
+  border-left: 2px solid var(--phosphor-dim);
+}
+
+.tech-readout-label {
+  color: var(--phosphor-secondary);
+  text-transform: uppercase;
+  margin-right: 8px;
+}
+
+/* Animations */
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.cursor-blink {
+  animation: blink 1s step-end infinite;
+}
+
+@keyframes typing {
+  from { width: 0; }
+  to { width: 100%; }
+}
+
+@keyframes glow-pulse {
+  0%, 100% {
+    box-shadow: 0 0 5px var(--phosphor-glow);
+  }
+  50% {
+    box-shadow: 0 0 20px var(--phosphor-glow), 0 0 30px var(--phosphor-glow);
+  }
+}
+
+.active-glow {
+  animation: glow-pulse 2s ease-in-out infinite;
+}
+
+/* Grid Pattern Background */
+.grid-bg {
+  background-image:
+    linear-gradient(rgba(0, 255, 65, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 255, 65, 0.03) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+/* Matrix Rain Effect - Background */
+.matrix-bg {
+  position: relative;
+  overflow: hidden;
+}
+
+.matrix-bg::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background:
+    repeating-linear-gradient(
+      180deg,
+      transparent,
+      transparent 35px,
+      rgba(0, 255, 65, 0.03) 35px,
+      rgba(0, 255, 65, 0.03) 36px
+    );
+  animation: matrix-scroll 20s linear infinite;
+  pointer-events: none;
+  z-index: -1;
+}
+
+@keyframes matrix-scroll {
+  0% { transform: translateY(-36px); }
+  100% { transform: translateY(0); }
+}
+
+/* Noise Texture Overlay */
+.noise-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%' height='100%' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 1001;
+  opacity: 0.5;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  :root {
+    font-size: 14px;
+  }
+}

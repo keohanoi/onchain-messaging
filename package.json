@@ -10,10 +10,21 @@
     "test:unit:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:all": "npm run test:unit && hardhat test",
-    "build": "tsc"
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:debug": "playwright test --debug",
+    "test:e2e:contracts": "playwright test e2e/contracts.spec.ts",
+    "test:e2e:app": "playwright test e2e/app.spec.ts",
+    "test:e2e:setup": "./scripts/e2e-setup.sh",
+    "build": "tsc",
+    "node": "hardhat node",
+    "compile": "hardhat compile",
+    "deploy:local": "hardhat run scripts/deploy.js --network localhost",
+    "export:abis": "node scripts/export-abis.js"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^4.0.0",
+    "@playwright/test": "^1.58.2",
     "@types/mocha": "^10.0.6",
     "@types/node": "^20.11.19",
     "@typescript-eslint/eslint-plugin": "^7.0.2",

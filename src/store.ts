@@ -4,6 +4,8 @@ export interface RatchetStore {
   load(peerId: string): Promise<RatchetState | undefined>;
   save(peerId: string, state: RatchetState): Promise<void>;
   lock(peerId: string): Promise<() => void>;  // HIGH FIX #7: Added lock mechanism
+  update(peerId: string, updater: (state: RatchetState | undefined) => RatchetState): Promise<RatchetState>;
+  updateWithResult<T>(peerId: string, updater: (state: RatchetState | undefined) => { result: T; state: RatchetState }): Promise<{ result: T; state: RatchetState }>;
 }
 
 // HIGH FIX #7: Type for update operations that return additional data
