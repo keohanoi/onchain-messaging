@@ -111,6 +111,50 @@ contract ZKVerifier is IZKVerifier {
     }
 
     /**
+     * @notice SECURITY FIX: Enable or disable merkle root validation
+     * @dev When enabled, only registered roots are accepted for proofs
+     */
+    function setRootValidationEnabled(bool enabled) external onlyOwner {
+        rootValidationEnabled = enabled;
+    }
+
+    /**
+     * @notice SECURITY FIX: Authorize a contract to register merkle roots
+     * @param registrar Address to authorize (e.g., GroupRegistry)
+     * @param authorized Whether to authorize or deauthorize
+     */
+    function setAuthorizedRootRegistrar(address registrar, bool authorized) external onlyOwner {
+        authorizedRootRegistrars[registrar] = authorized;
+        emit RootRegistrarUpdated(registrar, authorized);
+    }
+
+    /**
+     * @notice Register a merkle root for a group (called by authorized contracts)
+     * @dev SECURITY FIX: Only authorized registrars (like GroupRegistry) can call
+     */
+    function registerRoot(bytes32 groupId, bytes32 root) external {
+        require(authorizedRootRegistrars[msg.sender], "Not authorized to register roots");
+        validRoots[groupId][root] = true;
+        emit RootRegistered(groupId, root);
+    }
+
+    /**
+     * @notice Batch register merkle roots
+     */
+    function registerRoots(
+        bytes32[] calldata groupIds,
+        bytes32[] calldata roots
+    ) external {
+        require(authorizedRootRegistrars[msg.sender], "Not authorized to register roots");
+        require(groupIds.length == roots.length, "Length mismatch");
+
+        for (uint256 i = 0; i < groupIds.length; i++) {
+            validRoots[groupIds[i]][roots[i]] = true;
+            emit RootRegistered(groupIds[i], roots[i]);
+        }
+    }
+
+    /**
      * @notice Verify a group membership proof
      * @param proof The serialized proof (A.X, A.Y, B.X[0], B.X[1], B.Y[0], B.Y[1], C.X, C.Y)
      * @param merkleRoot The merkle root being proven against

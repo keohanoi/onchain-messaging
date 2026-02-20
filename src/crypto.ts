@@ -31,12 +31,18 @@ export function hmacSha256(key: Uint8Array, data: Uint8Array): Uint8Array {
 /**
  * AES-GCM encryption with optional Additional Authenticated Data (AAD)
  * HIGH FIX #4: Added AAD support for message integrity
+ * SECURITY FIX: Added key length validation
  */
 export function aesGcmEncrypt(
   plaintext: Uint8Array,
   key: Uint8Array,
   aad?: Uint8Array
 ): { ciphertext: Uint8Array; iv: Uint8Array; tag: Uint8Array } {
+  // SECURITY FIX: Validate key length for AES-256
+  if (key.length !== 32) {
+    throw new Error(`AES-256-GCM requires 32-byte key, got ${key.length} bytes`);
+  }
+
   const iv = crypto.randomBytes(12);
   const cipher = crypto.createCipheriv("aes-256-gcm", key, iv);
 
@@ -53,6 +59,7 @@ export function aesGcmEncrypt(
 /**
  * AES-GCM decryption with optional Additional Authenticated Data (AAD)
  * HIGH FIX #4: Added AAD support for message integrity
+ * SECURITY FIX: Added key length validation
  */
 export function aesGcmDecrypt(
   ciphertext: Uint8Array,
@@ -61,6 +68,11 @@ export function aesGcmDecrypt(
   tag: Uint8Array,
   aad?: Uint8Array
 ): Uint8Array {
+  // SECURITY FIX: Validate key length for AES-256
+  if (key.length !== 32) {
+    throw new Error(`AES-256-GCM requires 32-byte key, got ${key.length} bytes`);
+  }
+
   const decipher = crypto.createDecipheriv("aes-256-gcm", key, iv);
 
   // Set AAD if provided (must match what was used for encryption)

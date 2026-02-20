@@ -368,10 +368,12 @@ export class MessageClient {
         let ratchetState = existing;
         if (!ratchetState) {
           // Only run X3DH on first message from this peer
+          // SECURITY FIX: Include recipientIdentityPub for proper salt derivation
           const sessionKey = x3dhResponder({
             senderIdentityKey: Buffer.from(metadata.senderIdentityKey, "base64"),
             senderEphemeralKey: Buffer.from(metadata.senderEphemeralKey, "base64"),
             recipientIdentityPriv: this.identityKeyPair.privateKey,
+            recipientIdentityPub: this.identityKeyPair.publicKey,  // SECURITY FIX: Added
             recipientSignedPreKeyPriv: this.signedPreKeyPair.privateKey,
             recipientOneTimePreKeyPriv: this.oneTimePreKeyPair?.privateKey
           });

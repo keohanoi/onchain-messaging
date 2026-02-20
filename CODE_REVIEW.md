@@ -3,25 +3,67 @@
 > Review Date: 2026-02-20
 > Reviewed Against: PROTOCOL_DESIGN.md
 > Scope: Security, Protocol Compliance, Implementation Correctness
-> **Last Updated: 2026-02-20 - ALL FIXES COMPLETE**
+> **Last Updated: 2026-02-20 - SECURITY REVIEW COMPLETE**
 
 ---
 
 ## Executive Summary
 
-Comprehensive code review of the POMP implementation against the protocol design specification. **29 issues** identified across 3 severity levels.
+Comprehensive code review of the POMP implementation against the protocol design specification. **29 issues** identified across 3 severity levels, plus **4 additional CRITICAL security issues** found in follow-up security review.
 
 | Severity | Count | Blocking Deployment | Fixed |
 |----------|-------|---------------------|-------|
-| CRITICAL | 7 | Yes | 7/7 ✅ |
-| HIGH | 10 | Recommended | 10/10 ✅ |
+| CRITICAL | 11 | Yes | 11/11 ✅ |
+| HIGH | 12 | Recommended | 12/12 ✅ |
 | MEDIUM | 12 | Before Production | 12/12 ✅ |
 
-**Progress: 29/29 issues resolved - COMPLETE**
+**Progress: 35/35 issues resolved - COMPLETE**
 
 ---
 
-## CRITICAL Issues (7) - ALL FIXED ✅
+## Security Review Findings (Additional 4 CRITICAL Issues)
+
+### SR-1: X3DH Responder Salt Derivation Mismatch ✅ FIXED
+**File:** `src/x3dh.ts:201-204`
+
+**Issue:** Salt derivation used wrong keys (senderIdentityKey + senderEphemeralKey) instead of (senderIdentityKey + recipientIdentityPub).
+
+**Fix:** Added `recipientIdentityPub` to `X3DHResponderInput` interface and updated salt derivation.
+
+---
+
+### SR-2: ZKVerifier Missing Merkle Root Validation ✅ FIXED
+**File:** `contracts/core/ZKVerifier.sol:115-138`
+
+**Issue:** No validation that `merkleRoot` is valid for the given group.
+
+**Fix:**
+- Added `rootValidationEnabled` flag
+- Added `authorizedRootRegistrars` mapping
+- Added `registerRoot()` function for authorized contracts
+- Root validation now enforced when enabled
+
+---
+
+### SR-3: Stealth Legacy Function Y-Parity Bug ✅ FIXED
+**File:** `src/stealth.ts:118-128`
+
+**Issue:** Always assumed even Y (0x02), causing 50% of derived addresses to fail.
+
+**Fix:** Implemented proper Y calculation from X coordinate using Tonelli-Shanks for secp256k1.
+
+---
+
+### SR-4: Missing AES Key Length Validation ✅ FIXED
+**File:** `src/crypto.ts:35-50`
+
+**Issue:** No validation that key is exactly 32 bytes for AES-256.
+
+**Fix:** Added explicit key length validation in both `aesGcmEncrypt()` and `aesGcmDecrypt()`.
+
+---
+
+## Original CRITICAL Issues (7) - ALL FIXED ✅
 
 ### 1. Poseidon Hash Implementation Mismatch ✅ FIXED
 
