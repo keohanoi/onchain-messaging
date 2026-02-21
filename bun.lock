@@ -12,6 +12,7 @@
         "circomlibjs": "^0.1.7",
         "ethers": "^6.11.1",
         "ipfs-http-client": "^60.0.1",
+        "poseidon-solidity": "^0.0.5",
       },
       "devDependencies": {
         "@nomicfoundation/hardhat-toolbox": "^4.0.0",
@@ -1167,6 +1168,8 @@
     "playwright": ["playwright@1.58.2", "", { "dependencies": { "playwright-core": "1.58.2" }, "optionalDependencies": { "fsevents": "2.3.2" }, "bin": { "playwright": "cli.js" } }, "sha512-vA30H8Nvkq/cPBnNw4Q8TWz1EJyqgpuinBcHET0YVJVFldr8JDNiU9LaWAE1KqSkRYazuaBhTpB5ZzShOezQ6A=="],
 
     "playwright-core": ["playwright-core@1.58.2", "", { "bin": { "playwright-core": "cli.js" } }, "sha512-yZkEtftgwS8CsfYo7nm0KE8jsvm6i/PTgVtB8DL726wNf6H2IMsDuxCpJj59KDaxCtSnrWan2AeDqM7JBaultg=="],
+
+    "poseidon-solidity": ["poseidon-solidity@0.0.5", "", {}, "sha512-NzrvSwHzvZgT4hvg2GyGqeR+UOU/eLSEt4wAoXEua+VaR7NTKKwx1X9bPlh1VMBEVEno+IWvkRBbidFGzTeAqQ=="],
 
     "possible-typed-array-names": ["possible-typed-array-names@1.1.0", "", {}, "sha512-/+5VFTchJDoVj3bhoqi6UeymcD00DAwb1nJwamzPvHEszJ4FpF6SNNbUbOS8yI56qHzdV8eK0qEfOSiodkTdxg=="],
 

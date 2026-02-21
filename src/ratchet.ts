@@ -51,24 +51,37 @@ function kdfRoot(rootKey: Uint8Array, dhOut: Uint8Array): { newRootKey: Uint8Arr
   };
 }
 
-export function initRatchet(sessionKey: Uint8Array, dhPair: KeyPair): RatchetState {
-  // SECURITY FIX: Derive a proper salt from the session key instead of using empty salt
-  // This provides domain separation and prevents related-key attacks
-  const saltInput = Buffer.concat([
-    new TextEncoder().encode("POMP_RATCHET_SALT"),
-    dhPair.publicKey
-  ]);
-  const salt = Buffer.from(keccakHash(saltInput).slice(2), "hex");
+export function initRatchet(sessionKey: Uint8Array, dhPair: KeyPair, isInitiator: boolean = true): RatchetState {
+  // CRITICAL FIX: Use a constant salt derived from the session key
+  // DO NOT include dhPair.publicKey in the salt - both parties must derive
+  // the SAME initial chain keys from the SAME session key
+  const salt = new Uint8Array(32);  // Zero salt for initial derivation
 
   // Derive initial chain keys using HKDF for proper key separation
+  // Both parties will derive the SAME chain keys from the SAME session key
   const derived = hkdfSha256(
     sessionKey,
     salt,
     new TextEncoder().encode("POMP_INIT"),
     64
   );
-  const sendChainKey = derived.slice(0, 32);
-  const recvChainKey = derived.slice(32, 64);
+  let sendChainKey = derived.slice(0, 32);
+  let recvChainKey = derived.slice(32, 64);
+
+  // CRITICAL FIX: For Double Ratchet, responder must swap send/recv chain keys
+  // so that initiator's sendChainKey = responder's recvChainKey
+  // This is per Signal Protocol specification
+  if (!isInitiator) {
+    [sendChainKey, recvChainKey] = [recvChainKey, sendChainKey];
+  }
+
+  console.log('initRatchet:', {
+    isInitiator,
+    sessionKeySlice: Buffer.from(sessionKey).toString('hex').slice(0, 16),
+    sendChainKeySlice: Buffer.from(sendChainKey).toString('hex').slice(0, 16),
+    recvChainKeySlice: Buffer.from(recvChainKey).toString('hex').slice(0, 16),
+    dhPubKey: Buffer.from(dhPair.publicKey).toString('hex').slice(0, 16)
+  });
 
   return {
     rootKey: sessionKey,
@@ -196,8 +209,16 @@ export function ratchetDecrypt(
   // Step 2: Check if DH ratchet step is needed
   let workingState = state;
   const senderDhBytes = senderDh;
-  const needsDhRatchet = !state.theirDhPub ||
+  const needsDhRatchet = state.theirDhPub !== undefined &&
     Buffer.compare(Buffer.from(senderDhBytes), Buffer.from(state.theirDhPub)) !== 0;
+
+  console.log('ratchetDecrypt:', {
+    hasTheirDhPub: state.theirDhPub !== undefined,
+    needsDhRatchet,
+    recvCount: state.recvCount,
+    headerMsgIndex: header.msgIndex,
+    recvChainKeySlice: Buffer.from(state.recvChainKey).toString('hex').slice(0, 16)
+  });
 
   if (needsDhRatchet) {
     // Step 3: Skip message keys from previous chain if needed

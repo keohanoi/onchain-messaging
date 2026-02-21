@@ -2,8 +2,8 @@
   "_format": "hh-sol-cache-2",
   "files": {
     "/Users/mason/Projects/personal/onchain-msg/contracts/core/GroupRegistry.sol": {
-      "lastModificationDate": 1771598568674,
-      "contentHash": "fe77eb3efd69406c0605be9709c06c11",
+      "lastModificationDate": 1771601023970,
+      "contentHash": "782930901831ea291b5f44e4cd1a1a29",
       "sourceName": "contracts/core/GroupRegistry.sol",
       "solcConfig": {
         "version": "0.8.20",
@@ -12,7 +12,6 @@
             "enabled": true,
             "runs": 200
           },
-          "viaIR": true,
           "evmVersion": "paris",
           "outputSelection": {
             "*": {
@@ -30,7 +29,10 @@
           }
         }
       },
-      "imports": [],
+      "imports": [
+        "@openzeppelin/contracts/utils/cryptography/ECDSA.sol",
+        "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol"
+      ],
       "versionPragmas": [
         "^0.8.20"
       ],
@@ -39,8 +41,8 @@
       ]
     },
     "/Users/mason/Projects/personal/onchain-msg/contracts/core/MessageHub.sol": {
-      "lastModificationDate": 1771599543610,
-      "contentHash": "914b33d460b5a22bac67f8b3791a5e17",
+      "lastModificationDate": 1771602648872,
+      "contentHash": "8e8fa9b409630028e753a50e34175f81",
       "sourceName": "contracts/core/MessageHub.sol",
       "solcConfig": {
         "version": "0.8.20",
@@ -49,7 +51,6 @@
             "enabled": true,
             "runs": 200
           },
-          "viaIR": true,
           "evmVersion": "paris",
           "outputSelection": {
             "*": {
@@ -78,8 +79,8 @@
       ]
     },
     "/Users/mason/Projects/personal/onchain-msg/contracts/core/ZKVerifier.sol": {
-      "lastModificationDate": 1771599498824,
-      "contentHash": "ee018941b74251d84afa653290871851",
+      "lastModificationDate": 1771606239628,
+      "contentHash": "f3ca6e82821c5933873020d0a7f3f93e",
       "sourceName": "contracts/core/ZKVerifier.sol",
       "solcConfig": {
         "version": "0.8.20",
@@ -88,7 +89,6 @@
             "enabled": true,
             "runs": 200
           },
-          "viaIR": true,
           "evmVersion": "paris",
           "outputSelection": {
             "*": {
@@ -116,8 +116,8 @@
       ]
     },
     "/Users/mason/Projects/personal/onchain-msg/contracts/core/StealthRegistry.sol": {
-      "lastModificationDate": 1771599805593,
-      "contentHash": "c1bdc946f0ab547e6e420e8443f9ff1c",
+      "lastModificationDate": 1771644457584,
+      "contentHash": "820f01d580a952aac8cef8d01327a8ae",
       "sourceName": "contracts/core/StealthRegistry.sol",
       "solcConfig": {
         "version": "0.8.20",
@@ -126,7 +126,6 @@
             "enabled": true,
             "runs": 200
           },
-          "viaIR": true,
           "evmVersion": "paris",
           "outputSelection": {
             "*": {
@@ -166,7 +165,6 @@
             "enabled": true,
             "runs": 200
           },
-          "viaIR": true,
           "evmVersion": "paris",
           "outputSelection": {
             "*": {
@@ -203,7 +201,6 @@
             "enabled": true,
             "runs": 200
           },
-          "viaIR": true,
           "evmVersion": "paris",
           "outputSelection": {
             "*": {
@@ -242,7 +239,6 @@
             "enabled": true,
             "runs": 200
           },
-          "viaIR": true,
           "evmVersion": "paris",
           "outputSelection": {
             "*": {
@@ -283,7 +279,6 @@
             "enabled": true,
             "runs": 200
           },
-          "viaIR": true,
           "evmVersion": "paris",
           "outputSelection": {
             "*": {
@@ -323,7 +318,6 @@
             "enabled": true,
             "runs": 200
           },
-          "viaIR": true,
           "evmVersion": "paris",
           "outputSelection": {
             "*": {
@@ -360,7 +354,6 @@
             "enabled": true,
             "runs": 200
           },
-          "viaIR": true,
           "evmVersion": "paris",
           "outputSelection": {
             "*": {
@@ -399,7 +392,6 @@
             "enabled": true,
             "runs": 200
           },
-          "viaIR": true,
           "evmVersion": "paris",
           "outputSelection": {
             "*": {
@@ -436,7 +428,6 @@
             "enabled": true,
             "runs": 200
           },
-          "viaIR": true,
           "evmVersion": "paris",
           "outputSelection": {
             "*": {
@@ -463,8 +454,8 @@
       ]
     },
     "/Users/mason/Projects/personal/onchain-msg/contracts/primitives/MerkleTree.sol": {
-      "lastModificationDate": 1771598579303,
-      "contentHash": "540e1d071d9fe07fbd8ae6dbef59aea3",
+      "lastModificationDate": 1771602395043,
+      "contentHash": "45a335013588ae6842ab7a1fe90f1392",
       "sourceName": "contracts/primitives/MerkleTree.sol",
       "solcConfig": {
         "version": "0.8.20",
@@ -473,7 +464,6 @@
             "enabled": true,
             "runs": 200
           },
-          "viaIR": true,
           "evmVersion": "paris",
           "outputSelection": {
             "*": {
@@ -491,7 +481,9 @@
           }
         }
       },
-      "imports": [],
+      "imports": [
+        "./Poseidon.sol"
+      ],
       "versionPragmas": [
         "^0.8.20"
       ],
@@ -500,8 +492,8 @@
       ]
     },
     "/Users/mason/Projects/personal/onchain-msg/contracts/primitives/Poseidon.sol": {
-      "lastModificationDate": 1771599432503,
-      "contentHash": "1b9528bf5554ff9bcb07585f963379f6",
+      "lastModificationDate": 1771618912669,
+      "contentHash": "851aac3c82e4e63052bfe1c0fa889075",
       "sourceName": "contracts/primitives/Poseidon.sol",
       "solcConfig": {
         "version": "0.8.20",
@@ -510,7 +502,122 @@
             "enabled": true,
             "runs": 200
           },
-          "viaIR": true,
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "poseidon-solidity/PoseidonT3.sol"
+      ],
+      "versionPragmas": [
+        "^0.8.20"
+      ],
+      "artifacts": [
+        "Poseidon"
+      ]
+    },
+    "/Users/mason/Projects/personal/onchain-msg/contracts/core/ProtocolDAO.sol": {
+      "lastModificationDate": 1771603229007,
+      "contentHash": "c720a158bd66d9fa2c272200244b0d23",
+      "sourceName": "contracts/core/ProtocolDAO.sol",
+      "solcConfig": {
+        "version": "0.8.20",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "@openzeppelin/contracts/access/Ownable.sol",
+        "@openzeppelin/contracts/utils/cryptography/ECDSA.sol",
+        "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol"
+      ],
+      "versionPragmas": [
+        "^0.8.20"
+      ],
+      "artifacts": [
+        "ProtocolDAO"
+      ]
+    },
+    "/Users/mason/Projects/personal/onchain-msg/node_modules/@openzeppelin/contracts/access/Ownable.sol": {
+      "lastModificationDate": 1771599128091,
+      "contentHash": "d3c790edc9ccf808a17c5a6cd13614fd",
+      "sourceName": "@openzeppelin/contracts/access/Ownable.sol",
+      "solcConfig": {
+        "version": "0.8.20",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "../utils/Context.sol"
+      ],
+      "versionPragmas": [
+        "^0.8.20"
+      ],
+      "artifacts": [
+        "Ownable"
+      ]
+    },
+    "/Users/mason/Projects/personal/onchain-msg/node_modules/@openzeppelin/contracts/utils/Context.sol": {
+      "lastModificationDate": 1771599128090,
+      "contentHash": "67bfbc07588eb8683b3fd8f6f909563e",
+      "sourceName": "@openzeppelin/contracts/utils/Context.sol",
+      "solcConfig": {
+        "version": "0.8.20",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
           "evmVersion": "paris",
           "outputSelection": {
             "*": {
@@ -533,7 +640,43 @@
         "^0.8.20"
       ],
       "artifacts": [
-        "Poseidon"
+        "Context"
+      ]
+    },
+    "/Users/mason/Projects/personal/onchain-msg/node_modules/poseidon-solidity/PoseidonT3.sol": {
+      "lastModificationDate": 1771619392202,
+      "contentHash": "88a3db6023abdf06f44823c05f81f69e",
+      "sourceName": "poseidon-solidity/PoseidonT3.sol",
+      "solcConfig": {
+        "version": "0.8.20",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        ">=0.7.0"
+      ],
+      "artifacts": [
+        "PoseidonT3"
       ]
     }
   }

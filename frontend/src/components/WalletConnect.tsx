@@ -2,6 +2,8 @@
 
 import { useAccount, useConnect, useDisconnect, useBalance } from 'wagmi'
 import { useEffect, useState } from 'react'
+import { useAccountContext } from '../context/AccountContext'
+import { TestModeToggle } from './TestModeToggle'
 
 // Truncate address for display
 function truncateAddress(address: string) {
@@ -9,17 +11,20 @@ function truncateAddress(address: string) {
 }
 
 export function WalletConnect() {
-  const { address, isConnected } = useAccount()
+  const { address: wagmiAddress, isConnected: wagmiConnected } = useAccount()
   const { connectors, connect, isPending } = useConnect()
   const { disconnect } = useDisconnect()
-  const { data: balance } = useBalance({ address })
-  const [mounted, setMounted] = useState(false)
+  const { data: balance } = useBalance({ address: wagmiAddress })
+
+  const { isTestMode, testUser, mounted } = useAccountContext()
+
+  const [localMounted, setLocalMounted] = useState(false)
 
   useEffect(() => {
-    setMounted(true)
+    setLocalMounted(true)
   }, [])
 
-  if (!mounted) {
+  if (!mounted || !localMounted) {
     return (
       <div style={{
         display: 'flex',
@@ -38,9 +43,51 @@ export function WalletConnect() {
     )
   }
 
-  if (!isConnected) {
+  // Test mode - show test mode toggle (which includes user selector)
+  if (isTestMode && testUser) {
     return (
-      <div style={{ display: 'flex', gap: '8px' }}>
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '12px',
+      }}>
+        {/* Balance (test users have real ETH on Hardhat) */}
+        <div style={{
+          fontSize: '10px',
+          color: 'var(--text-secondary)',
+        }}>
+          10000.0 ETH
+        </div>
+
+        {/* Test user indicator */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          padding: '4px 12px',
+          background: 'rgba(255, 176, 0, 0.1)',
+          border: '1px solid var(--amber-dim)',
+          borderRadius: '2px',
+        }}>
+          <span className="status-dot online" style={{ marginLeft: 0 }} />
+          <span style={{
+            fontSize: '11px',
+            color: 'var(--amber-primary)',
+            fontFamily: 'Share Tech Mono, monospace',
+          }}>
+            {testUser.name} ({truncateAddress(testUser.address)})
+          </span>
+        </div>
+
+        <TestModeToggle />
+      </div>
+    )
+  }
+
+  // Not in test mode - show regular wallet connect or toggle
+  if (!wagmiConnected) {
+    return (
+      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
         {connectors.map((connector) => (
           <button
             key={connector.uid}
@@ -56,6 +103,7 @@ export function WalletConnect() {
             {isPending ? 'CONNECTING...' : 'CONNECT WALLET'}
           </button>
         ))}
+        <TestModeToggle />
       </div>
     )
   }
@@ -92,7 +140,7 @@ export function WalletConnect() {
           color: 'var(--phosphor-primary)',
           fontFamily: 'Share Tech Mono, monospace',
         }}>
-          {address && truncateAddress(address)}
+          {wagmiAddress && truncateAddress(wagmiAddress)}
         </span>
       </div>
 
@@ -107,6 +155,8 @@ export function WalletConnect() {
       >
         DISCONNECT
       </button>
+
+      <TestModeToggle />
     </div>
   )
 }

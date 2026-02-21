@@ -56,7 +56,7 @@ function validatePublicKey(key: Uint8Array, context: string): void {
  * SECURITY: Per Signal X3DH spec, the initiator MUST verify the signed prekey signature
  * @param identityKey The recipient's identity public key (verifying key)
  * @param signedPreKey The signed prekey to verify
- * @param signature The signature over the signed prekey
+ * @param signature The signature over the signed prekey (64 bytes, compact format)
  * @throws Error if signature verification fails
  */
 function verifySignedPreKeySignature(
@@ -65,16 +65,15 @@ function verifySignedPreKeySignature(
   signature: Uint8Array
 ): void {
   try {
+    // Signature should be 64 bytes (compact r || s format)
+    if (signature.length !== 64) {
+      throw new Error(`Invalid signature length: expected 64, got ${signature.length}`);
+    }
+
     // Hash the signed prekey to get the message hash
     const msgHash = Buffer.from(keccakHash(signedPreKey).slice(2), "hex");
 
     // Verify the signature using the identity key
-    // Signature should be 64 bytes (r || s) for secp256k1
-    if (signature.length !== 64) {
-      throw new Error("Invalid signature length");
-    }
-
-    // Convert to noble format and verify
     const valid = secp256k1.verify(signature, msgHash, identityKey);
 
     if (!valid) {
@@ -181,6 +180,20 @@ export function x3dhInitiator(
     32
   );
 
+  // DEBUG: Log session key derivation for initiator
+  console.log('X3DH Initiator:', {
+    myIdentityPub: Buffer.from(myIdentity.publicKey).toString('hex').slice(0, 16),
+    recipientIdentityPub: Buffer.from(recipientBundle.identityKey).toString('hex').slice(0, 16),
+    recipientSignedPreKey: Buffer.from(recipientBundle.signedPreKey).toString('hex').slice(0, 16),
+    ephemeralPub: Buffer.from(ephemeralKeyPair.publicKey).toString('hex').slice(0, 16),
+    salt: Buffer.from(salt).toString('hex').slice(0, 16),
+    sessionKey: Buffer.from(sharedSecret).toString('hex').slice(0, 32),
+    dh1Length: dh1.length,
+    dh2Length: dh2.length,
+    dh3Length: dh3.length,
+    dh4Length: dh4.length
+  });
+
   let pqCiphertext: Uint8Array | undefined;
   if (recipientBundle.pqPublicKey && pqEncapsulate) {
     const pq = pqEncapsulate(recipientBundle.pqPublicKey);
@@ -259,6 +272,19 @@ export function x3dhResponder(input: X3DHResponderInput): Uint8Array {
     new TextEncoder().encode("POMP_X3DH"),
     32
   );
+
+  // DEBUG: Log session key derivation for responder
+  console.log('X3DH Responder:', {
+    senderIdentityPub: Buffer.from(input.senderIdentityKey).toString('hex').slice(0, 16),
+    senderEphemeralPub: Buffer.from(input.senderEphemeralKey).toString('hex').slice(0, 16),
+    myIdentityPub: Buffer.from(input.recipientIdentityPub).toString('hex').slice(0, 16),
+    salt: Buffer.from(salt).toString('hex').slice(0, 16),
+    sessionKey: Buffer.from(sharedSecret).toString('hex').slice(0, 32),
+    dh1Length: dh1.length,
+    dh2Length: dh2.length,
+    dh3Length: dh3.length,
+    dh4Length: dh4.length
+  });
 
   if (input.pqSharedSecret) {
     sharedSecret = hkdfSha256(

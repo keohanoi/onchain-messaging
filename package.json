@@ -43,6 +43,7 @@
     "arweave": "^1.15.5",
     "circomlibjs": "^0.1.7",
     "ethers": "^6.11.1",
-    "ipfs-http-client": "^60.0.1"
+    "ipfs-http-client": "^60.0.1",
+    "poseidon-solidity": "^0.0.5"
   }
 }

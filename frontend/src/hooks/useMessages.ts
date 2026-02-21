@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-import { useAccount } from 'wagmi'
+import { useAccountContext } from '../context/AccountContext'
 import { Message } from '../../../src/types'
 import { useMessageClient } from './useMessageClient'
 
@@ -15,7 +15,7 @@ export interface UseMessagesReturn {
 }
 
 export function useMessages(): UseMessagesReturn {
-  const { isConnected } = useAccount()
+  const { isConnected, mounted } = useAccountContext()
   const { client } = useMessageClient()
   const [messages, setMessages] = useState<Message[]>([])
   const [isScanning, setIsScanning] = useState(false)
@@ -23,7 +23,7 @@ export function useMessages(): UseMessagesReturn {
   const [error, setError] = useState<string | null>(null)
 
   const scanMessages = useCallback(async () => {
-    if (!isConnected || !client) {
+    if (!mounted || !isConnected || !client) {
       setError('Wallet not connected or client not initialized')
       return
     }
@@ -40,13 +40,13 @@ export function useMessages(): UseMessagesReturn {
     } finally {
       setIsScanning(false)
     }
-  }, [isConnected, client])
+  }, [mounted, isConnected, client])
 
   const sendMessage = useCallback(async (
     recipient: string,
     content: string
   ): Promise<string | null> => {
-    if (!isConnected || !client) {
+    if (!mounted || !isConnected || !client) {
       setError('Wallet not connected or client not initialized')
       return null
     }
@@ -74,7 +74,7 @@ export function useMessages(): UseMessagesReturn {
     } finally {
       setIsSending(false)
     }
-  }, [isConnected, client])
+  }, [mounted, isConnected, client])
 
   return {
     messages,

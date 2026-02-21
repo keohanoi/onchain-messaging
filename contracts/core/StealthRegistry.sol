@@ -67,32 +67,37 @@ contract StealthRegistry {
     );
 
     /**
-     * @notice Register a new key bundle
-     * @param bundle The key bundle to register
-     * @param ethSignature EIP-191 signature over the bundle hash
+     * @notice Compute bundle hash - uses memory to reduce stack depth
      */
-    function registerKeyBundle(
-        KeyBundleInput calldata bundle,
-        bytes calldata ethSignature
-    ) external {
-        bytes32 bundleHash = keccak256(
-            abi.encode(
-                msg.sender,
-                bundle.identityKey,
-                bundle.signedPreKey,
-                bundle.signedPreKeySignature,
-                bundle.oneTimePreKeyBundleCid,
-                bundle.stealthSpendingPubKey,
-                bundle.stealthViewingPubKey,
-                bundle.pqPublicKey,
-                bundle.oneTimePreKeyCount
-            )
+    function _computeBundleHash(
+        address sender,
+        KeyBundleInput calldata bundle
+    ) internal pure returns (bytes32) {
+        // Use memory array to avoid stack too deep
+        bytes memory encoded = abi.encode(
+            sender,
+            bundle.identityKey,
+            bundle.signedPreKey,
+            bundle.signedPreKeySignature
         );
-        bytes32 digest = MessageHashUtils.toEthSignedMessageHash(bundleHash);
-        address recovered = ECDSA.recover(digest, ethSignature);
-        require(recovered == msg.sender, "Invalid signature");
+        bytes memory encoded2 = abi.encode(
+            bundle.oneTimePreKeyBundleCid,
+            bundle.stealthSpendingPubKey,
+            bundle.stealthViewingPubKey,
+            bundle.pqPublicKey,
+            bundle.oneTimePreKeyCount
+        );
+        return keccak256(abi.encodePacked(encoded, encoded2));
+    }
 
-        keyBundles[msg.sender] = KeyBundle({
+    /**
+     * @notice Store key bundle - extracted to reduce stack depth
+     */
+    function _storeKeyBundle(
+        address owner,
+        KeyBundleInput calldata bundle
+    ) internal {
+        keyBundles[owner] = KeyBundle({
             identityKey: bundle.identityKey,
             signedPreKey: bundle.signedPreKey,
             signedPreKeySignature: bundle.signedPreKeySignature,
@@ -104,6 +109,23 @@ contract StealthRegistry {
             oneTimePreKeyCount: bundle.oneTimePreKeyCount,
             oneTimePreKeyConsumed: 0
         });
+    }
+
+    /**
+     * @notice Register a new key bundle
+     * @param bundle The key bundle to register
+     * @param ethSignature EIP-191 signature over the bundle hash
+     */
+    function registerKeyBundle(
+        KeyBundleInput calldata bundle,
+        bytes calldata ethSignature
+    ) external {
+        bytes32 bundleHash = _computeBundleHash(msg.sender, bundle);
+        bytes32 digest = MessageHashUtils.toEthSignedMessageHash(bundleHash);
+        address recovered = ECDSA.recover(digest, ethSignature);
+        require(recovered == msg.sender, "Invalid signature");
+
+        _storeKeyBundle(msg.sender, bundle);
 
         emit KeyBundleRegistered(msg.sender, bundleHash, bundle.oneTimePreKeyBundleCid);
     }

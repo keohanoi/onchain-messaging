@@ -1,0 +1,21 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Copy package files and Hardhat config
+COPY package*.json ./
+COPY hardhat.config.js ./
+
+# Copy source files needed for compilation
+COPY contracts ./contracts
+COPY scripts ./scripts
+
+# Install dependencies and compile contracts
+RUN npm install
+RUN npx hardhat compile
+
+# Set environment for Docker network
+ENV HARDHAT_URL=http://hardhat:8545
+
+# Deploy contracts
+CMD ["npx", "hardhat", "run", "scripts/deploy.js", "--network", "localhost"]

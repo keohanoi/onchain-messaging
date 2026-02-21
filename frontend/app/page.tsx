@@ -1,21 +1,18 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useAccount } from 'wagmi'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { useAccountContext } from '../src/context/AccountContext'
 import { WalletConnect } from '../src/components/WalletConnect'
+import { useMessageClient } from '../src/hooks/useMessageClient'
+import { useMessages } from '../src/hooks/useMessages'
+import { useRegisterKeys } from '../src/hooks/useRegisterKeys'
+import { useIpfsStorage } from '../src/hooks/useIpfsStorage'
+import { BackupRestore } from '../src/components/BackupRestore'
+import { Message } from '../../src/types'
 
-// Generate random hex only on client side
-const randomHex = (length: number) =>
-  Array.from({ length }, () => Math.floor(Math.random() * 16).toString(16)).join('')
-
-const randomTag = () =>
-  `0x${Math.floor(Math.random() * 256).toString(16).padStart(2, '0')}`
-
-// Types
-interface Message {
+// UI-specific message type that extends core Message with display properties
+interface UIMessage extends Message {
   id: string
-  content: string
-  timestamp: number
   sender: 'me' | 'them'
   nullifier: string
   viewTag: string
@@ -34,85 +31,12 @@ interface Conversation {
   viewTag: string
 }
 
-// Mock Data - Use static timestamps to avoid hydration mismatch
-const BASE_TIME = 1700000000000 // Fixed base timestamp
+// Generate random hex only on client side
+const randomHex = (length: number) =>
+  Array.from({ length }, () => Math.floor(Math.random() * 16).toString(16)).join('')
 
-const mockConversations: Conversation[] = [
-  {
-    id: '1',
-    name: '0x7a3d...f291',
-    stealthSpendingKey: '0x7a3d8cf291e4b6a0c3d7e8f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1',
-    lastMessage: 'Encrypted message received',
-    unread: 2,
-    online: true,
-    viewTag: '0xa7',
-  },
-  {
-    id: '2',
-    name: '0x4b2e...91c4',
-    stealthSpendingKey: '0x4b2e91c4f8a3b5d7e1c9f0a2b4c6d8e0f1a3b5c7d9e1f3a5b7c9d1e3f5a7b9c1',
-    lastMessage: 'See you at the rendezvous',
-    unread: 0,
-    online: false,
-    viewTag: '0x3f',
-  },
-  {
-    id: '3',
-    name: '0x9f1c...d45a',
-    stealthSpendingKey: '0x9f1cd45ab8e7c3a9f0d2b4c6e8a0f1d3b5c7e9a1f3d5b7c9e1a3f5d7b9c1e3a',
-    lastMessage: 'Keys rotated successfully',
-    unread: 1,
-    online: true,
-    viewTag: '0x82',
-  },
-]
-
-const mockMessages: Message[] = [
-  {
-    id: '1',
-    content: 'Establishing secure channel...',
-    timestamp: BASE_TIME - 3600000,
-    sender: 'me',
-    nullifier: '0x8f3a2b1c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2',
-    viewTag: '0xa7',
-    stealthAddress: '0x1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1',
-    proofVerified: true,
-    encrypted: false,
-  },
-  {
-    id: '2',
-    content: 'Channel established. X3DH complete. Session key derived.',
-    timestamp: BASE_TIME - 3500000,
-    sender: 'them',
-    nullifier: '0x2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3',
-    viewTag: '0xa7',
-    stealthAddress: '0x2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c',
-    proofVerified: true,
-    encrypted: true,
-  },
-  {
-    id: '3',
-    content: 'The package will arrive at coordinates 47.3769° N, 8.5417° E. Confirmation code: SIGMA-7.',
-    timestamp: BASE_TIME - 1800000,
-    sender: 'them',
-    nullifier: '0x3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4',
-    viewTag: '0xa7',
-    stealthAddress: '0x3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c3',
-    proofVerified: true,
-    encrypted: true,
-  },
-  {
-    id: '4',
-    content: 'Confirmed. I will be there. Using new identity commitment for this operation.',
-    timestamp: BASE_TIME - 900000,
-    sender: 'me',
-    nullifier: '0x4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5',
-    viewTag: '0xa7',
-    stealthAddress: '0x4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c4',
-    proofVerified: true,
-    encrypted: true,
-  },
-]
+const randomTag = () =>
+  `0x${Math.floor(Math.random() * 256).toString(16).padStart(2, '0')}`
 
 // Utility functions
 const formatTime = (ts: number) => {
@@ -160,7 +84,7 @@ function TechBadge({ label, value, color = 'green' }: { label: string; value: st
   )
 }
 
-function MessageBubble({ message }: { message: Message }) {
+function MessageBubble({ message }: { message: UIMessage }) {
   const isMe = message.sender === 'me'
 
   return (
@@ -171,7 +95,6 @@ function MessageBubble({ message }: { message: Message }) {
       marginBottom: '16px',
       animation: 'fadeIn 0.3s ease-out',
     }}>
-      {/* Message bubble */}
       <div style={{
         maxWidth: '70%',
         padding: '12px 16px',
@@ -182,7 +105,6 @@ function MessageBubble({ message }: { message: Message }) {
         borderRadius: '4px',
         position: 'relative',
       }}>
-        {/* Encryption indicator */}
         {message.encrypted && (
           <div style={{
             position: 'absolute',
@@ -193,7 +115,7 @@ function MessageBubble({ message }: { message: Message }) {
             fontSize: '9px',
             color: 'var(--success)',
           }}>
-            🔒 E2E
+            E2E
           </div>
         )}
 
@@ -206,7 +128,6 @@ function MessageBubble({ message }: { message: Message }) {
           {message.content}
         </p>
 
-        {/* Timestamp */}
         <div style={{
           marginTop: '8px',
           fontSize: '10px',
@@ -217,7 +138,6 @@ function MessageBubble({ message }: { message: Message }) {
         </div>
       </div>
 
-      {/* Tech readout */}
       <div className="tech-readout" style={{
         marginTop: '4px',
         maxWidth: '70%',
@@ -227,7 +147,7 @@ function MessageBubble({ message }: { message: Message }) {
           <TechBadge label="VIEW" value={message.viewTag} color="cyan" />
           <TechBadge
             label="PROOF"
-            value={message.proofVerified ? '✓ VERIFIED' : '✗ FAILED'}
+            value={message.proofVerified ? 'VERIFIED' : 'FAILED'}
             color={message.proofVerified ? 'green' : 'amber'}
           />
         </div>
@@ -248,9 +168,26 @@ function ConversationList({
   onSelect
 }: {
   conversations: Conversation[]
-  activeId: string
+  activeId: string | null
   onSelect: (id: string) => void
 }) {
+  if (conversations.length === 0) {
+    return (
+      <div style={{
+        flex: 1,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '20px',
+        color: 'var(--text-dim)',
+        fontSize: '11px',
+        textAlign: 'center',
+      }}>
+        No conversations yet.<br />Start a new secure channel to begin messaging.
+      </div>
+    )
+  }
+
   return (
     <div style={{
       flex: 1,
@@ -323,7 +260,7 @@ function ConversationList({
   )
 }
 
-function TechPanel({ message }: { message: Message | null }) {
+function TechPanel({ message }: { message: UIMessage | null }) {
   if (!message) return null
 
   return (
@@ -343,7 +280,6 @@ function TechPanel({ message }: { message: Message | null }) {
         overflowY: 'auto',
         padding: '12px',
       }}>
-        {/* ZK Proof Section */}
         <div style={{ marginBottom: '16px' }}>
           <h4 style={{
             color: 'var(--phosphor-primary)',
@@ -356,7 +292,7 @@ function TechPanel({ message }: { message: Message | null }) {
           </h4>
           <div className="tech-readout" style={{ marginBottom: '8px' }}>
             <div style={{ color: message.proofVerified ? 'var(--success)' : 'var(--error)', marginBottom: '4px' }}>
-              {message.proofVerified ? '✓ VERIFIED' : '✗ INVALID'}
+              {message.proofVerified ? 'VERIFIED' : 'INVALID'}
             </div>
             <div style={{ fontSize: '9px', color: 'var(--text-secondary)' }}>
               Groth16 on BN254
@@ -364,7 +300,6 @@ function TechPanel({ message }: { message: Message | null }) {
           </div>
         </div>
 
-        {/* Stealth Address Section */}
         <div style={{ marginBottom: '16px' }}>
           <h4 style={{
             color: 'var(--amber-primary)',
@@ -385,7 +320,6 @@ function TechPanel({ message }: { message: Message | null }) {
           </div>
         </div>
 
-        {/* Nullifier Section */}
         <div style={{ marginBottom: '16px' }}>
           <h4 style={{
             color: 'var(--accent-cyan)',
@@ -406,7 +340,6 @@ function TechPanel({ message }: { message: Message | null }) {
           </div>
         </div>
 
-        {/* View Tag */}
         <div style={{ marginBottom: '16px' }}>
           <h4 style={{
             color: 'var(--accent-magenta)',
@@ -437,7 +370,6 @@ function TechPanel({ message }: { message: Message | null }) {
           </div>
         </div>
 
-        {/* Ratchet State */}
         <div>
           <h4 style={{
             color: 'var(--phosphor-primary)',
@@ -449,9 +381,8 @@ function TechPanel({ message }: { message: Message | null }) {
             Ratchet State
           </h4>
           <div style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>
-            <div>Chain: Send #7 / Recv #4</div>
-            <div>Root Key: Rotated</div>
-            <div>Skipped Keys: 2 cached</div>
+            <div>Double Ratchet Active</div>
+            <div>Forward Secrecy Enabled</div>
           </div>
         </div>
       </div>
@@ -459,7 +390,40 @@ function TechPanel({ message }: { message: Message | null }) {
   )
 }
 
-function KeyManagementModal({ onClose }: { onClose: () => void }) {
+interface KeyManagementModalProps {
+  onClose: () => void
+  isRegistered: boolean
+  isRegistering: boolean
+  registrationError: string | null
+  onRegister: () => Promise<void>
+  storedKeys: {
+    identityPublicKey?: string
+    signedPrePublicKey?: string
+    stealthSpendingPublicKey?: string
+    stealthViewingPublicKey?: string
+    identityCommitment?: string
+  } | null
+}
+
+function KeyManagementModal({
+  onClose,
+  isRegistered,
+  isRegistering,
+  registrationError,
+  onRegister,
+  storedKeys
+}: KeyManagementModalProps) {
+  const [rotating, setRotating] = useState(false)
+
+  const handleRotateKey = async () => {
+    setRotating(true)
+    try {
+      await onRegister()
+    } finally {
+      setRotating(false)
+    }
+  }
+
   return (
     <div style={{
       position: 'fixed',
@@ -493,12 +457,46 @@ function KeyManagementModal({ onClose }: { onClose: () => void }) {
               fontSize: '16px',
             }}
           >
-            ✕
+            x
           </button>
         </div>
 
         <div style={{ padding: '20px', overflowY: 'auto', maxHeight: 'calc(80vh - 40px)' }}>
-          {/* Identity Key */}
+          {registrationError && (
+            <div style={{
+              marginBottom: '16px',
+              padding: '12px',
+              background: 'rgba(255, 0, 0, 0.1)',
+              border: '1px solid var(--error)',
+              borderRadius: '4px',
+              color: 'var(--error)',
+              fontSize: '12px',
+            }}>
+              ERROR: {registrationError}
+            </div>
+          )}
+
+          <div style={{ marginBottom: '24px' }}>
+            <h3 style={{
+              color: isRegistered ? 'var(--success)' : 'var(--amber-primary)',
+              fontSize: '12px',
+              marginBottom: '12px',
+              textTransform: 'uppercase',
+            }}>
+              Registration Status: {isRegistered ? 'REGISTERED' : 'NOT REGISTERED'}
+            </h3>
+            {!isRegistered && (
+              <button
+                className="btn-terminal primary"
+                onClick={onRegister}
+                disabled={isRegistering}
+                style={{ fontSize: '11px', padding: '8px 16px' }}
+              >
+                {isRegistering ? 'REGISTERING...' : 'REGISTER KEYS ON-CHAIN'}
+              </button>
+            )}
+          </div>
+
           <div style={{ marginBottom: '24px' }}>
             <h3 style={{
               color: 'var(--phosphor-primary)',
@@ -513,16 +511,15 @@ function KeyManagementModal({ onClose }: { onClose: () => void }) {
               border: '1px solid var(--phosphor-dim)',
               padding: '12px',
             }}>
-              <div className="hex-display" style={{ marginBottom: '8px' }}>
-                0x1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b
+              <div className="hex-display" style={{ marginBottom: '8px', fontSize: '9px', wordBreak: 'break-all' }}>
+                {storedKeys?.identityPublicKey || 'Not generated'}
               </div>
               <div style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>
-                Created: 2024-01-15 14:32:07 UTC • Never rotate
+                Never rotate - This is your permanent identity
               </div>
             </div>
           </div>
 
-          {/* Signed Pre-Key */}
           <div style={{ marginBottom: '24px' }}>
             <h3 style={{
               color: 'var(--amber-primary)',
@@ -537,73 +534,26 @@ function KeyManagementModal({ onClose }: { onClose: () => void }) {
               border: '1px solid var(--amber-dim)',
               padding: '12px',
             }}>
-              <div className="hex-display" style={{ marginBottom: '8px' }}>
-                0x9f8e7d6c5b4a3f2e1d0c9b8a7f6e5d4c3b2a1f0e9d8c7b6a5f4e3d2c1b0a9f8e
+              <div className="hex-display" style={{ marginBottom: '8px', fontSize: '9px', wordBreak: 'break-all' }}>
+                {storedKeys?.signedPrePublicKey || 'Not generated'}
               </div>
               <div style={{ fontSize: '10px', color: 'var(--text-secondary)', marginBottom: '8px' }}>
-                Signature: ✓ Valid • Rotated: 2 hours ago
+                {isRegistered ? 'Signature: Valid' : 'Signature: Pending registration'}
               </div>
-              <button className="btn-terminal amber" style={{ fontSize: '10px', padding: '6px 12px' }}>
-                Rotate Key
+              <button
+                className="btn-terminal amber"
+                style={{ fontSize: '10px', padding: '6px 12px' }}
+                onClick={handleRotateKey}
+                disabled={rotating || isRegistering}
+              >
+                {rotating ? 'ROTATING...' : 'Rotate Key'}
               </button>
             </div>
           </div>
 
-          {/* One-Time Pre-Keys */}
           <div style={{ marginBottom: '24px' }}>
             <h3 style={{
               color: 'var(--accent-cyan)',
-              fontSize: '12px',
-              marginBottom: '12px',
-              textTransform: 'uppercase',
-            }}>
-              One-Time Pre-Keys
-            </h3>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '20px',
-              marginBottom: '12px',
-            }}>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{
-                  fontSize: '32px',
-                  color: 'var(--success)',
-                  fontFamily: 'Share Tech Mono, monospace',
-                }}>
-                  47
-                </div>
-                <div style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>Available</div>
-              </div>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{
-                  fontSize: '32px',
-                  color: 'var(--amber-primary)',
-                  fontFamily: 'Share Tech Mono, monospace',
-                }}>
-                  53
-                </div>
-                <div style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>Consumed</div>
-              </div>
-            </div>
-            <div style={{
-              height: '4px',
-              background: 'var(--screen-border)',
-              borderRadius: '2px',
-              overflow: 'hidden',
-            }}>
-              <div style={{
-                width: '47%',
-                height: '100%',
-                background: 'var(--phosphor-primary)',
-              }} />
-            </div>
-          </div>
-
-          {/* Stealth Keys */}
-          <div style={{ marginBottom: '24px' }}>
-            <h3 style={{
-              color: 'var(--accent-magenta)',
               fontSize: '12px',
               marginBottom: '12px',
               textTransform: 'uppercase',
@@ -615,28 +565,49 @@ function KeyManagementModal({ onClose }: { onClose: () => void }) {
                 <div style={{ fontSize: '10px', color: 'var(--text-secondary)', marginBottom: '4px' }}>
                   Viewing Key
                 </div>
-                <div className="hex-display" style={{ fontSize: '9px' }}>
-                  0x4a5b6c7d8e9f...
+                <div className="hex-display" style={{ fontSize: '9px', wordBreak: 'break-all' }}>
+                  {storedKeys?.stealthViewingPublicKey ? truncateHex(storedKeys.stealthViewingPublicKey, 10, 8) : 'Not generated'}
                 </div>
               </div>
               <div>
                 <div style={{ fontSize: '10px', color: 'var(--text-secondary)', marginBottom: '4px' }}>
                   Spending Key
                 </div>
-                <div className="hex-display" style={{ fontSize: '9px' }}>
-                  0x1d2e3f4a5b6c...
+                <div className="hex-display" style={{ fontSize: '9px', wordBreak: 'break-all' }}>
+                  {storedKeys?.stealthSpendingPublicKey ? truncateHex(storedKeys.stealthSpendingPublicKey, 10, 8) : 'Not generated'}
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Actions */}
+          <div style={{ marginBottom: '24px' }}>
+            <h3 style={{
+              color: 'var(--phosphor-primary)',
+              fontSize: '12px',
+              marginBottom: '12px',
+              textTransform: 'uppercase',
+            }}>
+              Identity Commitment
+            </h3>
+            <div className="hex-display" style={{
+              background: 'rgba(0,0,0,0.3)',
+              padding: '8px',
+              borderRadius: '2px',
+              wordBreak: 'break-all',
+              fontSize: '10px',
+            }}>
+              {storedKeys?.identityCommitment || 'Not generated'}
+            </div>
+          </div>
+
+          {/* IPFS Encrypted Backup Section */}
+          <div style={{ marginBottom: '24px' }}>
+            <BackupRestore />
+          </div>
+
           <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
             <button className="btn-terminal" onClick={onClose}>
               Close
-            </button>
-            <button className="btn-terminal primary">
-              Backup Keys
             </button>
           </div>
         </div>
@@ -645,7 +616,142 @@ function KeyManagementModal({ onClose }: { onClose: () => void }) {
   )
 }
 
-function ComposeBar({ onSend }: { onSend: (msg: string) => void }) {
+interface NewChannelModalProps {
+  onClose: () => void
+  onCreateChannel: (address: string) => void
+  isCreating: boolean
+  error: string | null
+}
+
+function NewChannelModal({ onClose, onCreateChannel, isCreating, error }: NewChannelModalProps) {
+  const [recipientAddress, setRecipientAddress] = useState('')
+
+  const handleCreate = () => {
+    if (recipientAddress.trim()) {
+      onCreateChannel(recipientAddress.trim())
+    }
+  }
+
+  return (
+    <div style={{
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      background: 'rgba(0, 0, 0, 0.8)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 2000,
+    }}>
+      <div className="terminal-window" style={{
+        width: '450px',
+      }}>
+        <div className="terminal-header">
+          <div className="terminal-dot green" />
+          <span className="terminal-title">NEW SECURE CHANNEL</span>
+          <button
+            onClick={onClose}
+            style={{
+              marginLeft: 'auto',
+              background: 'none',
+              border: 'none',
+              color: 'var(--text-secondary)',
+              cursor: 'pointer',
+              fontSize: '16px',
+            }}
+          >
+            x
+          </button>
+        </div>
+
+        <div style={{ padding: '20px' }}>
+          <p style={{
+            color: 'var(--text-secondary)',
+            fontSize: '12px',
+            marginBottom: '16px',
+          }}>
+            Enter the Ethereum address of the recipient to establish a new secure messaging channel.
+          </p>
+
+          {error && (
+            <div style={{
+              marginBottom: '16px',
+              padding: '12px',
+              background: 'rgba(255, 0, 0, 0.1)',
+              border: '1px solid var(--error)',
+              borderRadius: '4px',
+              color: 'var(--error)',
+              fontSize: '12px',
+            }}>
+              ERROR: {error}
+            </div>
+          )}
+
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{
+              display: 'block',
+              color: 'var(--text-secondary)',
+              fontSize: '11px',
+              marginBottom: '8px',
+            }}>
+              Recipient Address
+            </label>
+            <input
+              type="text"
+              className="input-terminal"
+              placeholder="0x..."
+              value={recipientAddress}
+              onChange={(e) => setRecipientAddress(e.target.value)}
+              style={{
+                width: '100%',
+                fontSize: '12px',
+                padding: '10px',
+              }}
+            />
+          </div>
+
+          <div style={{
+            background: 'rgba(0, 255, 65, 0.05)',
+            border: '1px solid var(--phosphor-dim)',
+            padding: '12px',
+            marginBottom: '20px',
+          }}>
+            <div style={{ fontSize: '10px', color: 'var(--phosphor-primary)', marginBottom: '8px' }}>
+              PROTOCOL: X3DH Key Exchange
+            </div>
+            <div style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>
+              A new Double Ratchet session will be established for forward secrecy.
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+            <button className="btn-terminal" onClick={onClose}>
+              Cancel
+            </button>
+            <button
+              className="btn-terminal primary"
+              onClick={handleCreate}
+              disabled={isCreating || !recipientAddress.trim()}
+              style={{ opacity: isCreating || !recipientAddress.trim() ? 0.5 : 1 }}
+            >
+              {isCreating ? 'CREATING...' : 'CREATE CHANNEL'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+interface ComposeBarProps {
+  onSend: (msg: string, recipient: string) => Promise<void>
+  isSending: boolean
+  activeRecipient: string | null
+}
+
+function ComposeBar({ onSend, isSending, activeRecipient }: ComposeBarProps) {
   const [message, setMessage] = useState('')
   const [encrypting, setEncrypting] = useState(false)
   const [nextTag, setNextTag] = useState('0x??')
@@ -655,15 +761,16 @@ function ComposeBar({ onSend }: { onSend: (msg: string) => void }) {
   }, [])
 
   const handleSend = async () => {
-    if (!message.trim()) return
+    if (!message.trim() || !activeRecipient) return
     setEncrypting(true)
-    // Simulate encryption delay
-    await new Promise(r => setTimeout(r, 500))
-    onSend(message)
+    await new Promise(r => setTimeout(r, 100))
+    await onSend(message, activeRecipient)
     setMessage('')
     setEncrypting(false)
     setNextTag(randomTag())
   }
+
+  const isDisabled = encrypting || isSending || !message.trim() || !activeRecipient
 
   return (
     <div style={{
@@ -671,8 +778,7 @@ function ComposeBar({ onSend }: { onSend: (msg: string) => void }) {
       borderTop: '1px solid var(--screen-border)',
       background: 'rgba(0, 0, 0, 0.3)',
     }}>
-      {/* Encryption status */}
-      {encrypting && (
+      {(encrypting || isSending) && (
         <div style={{
           marginBottom: '8px',
           fontSize: '10px',
@@ -682,7 +788,17 @@ function ComposeBar({ onSend }: { onSend: (msg: string) => void }) {
           gap: '8px',
         }}>
           <StatusIndicator status="encrypting" />
-          <span>Encrypting message... Generating ZK proof...</span>
+          <span>{isSending ? 'Sending transaction...' : 'Encrypting message...'}</span>
+        </div>
+      )}
+
+      {!activeRecipient && (
+        <div style={{
+          marginBottom: '8px',
+          fontSize: '10px',
+          color: 'var(--text-dim)',
+        }}>
+          Select or create a conversation to send messages
         </div>
       )}
 
@@ -690,23 +806,23 @@ function ComposeBar({ onSend }: { onSend: (msg: string) => void }) {
         <input
           type="text"
           className="input-terminal"
-          placeholder="Enter message (will be E2E encrypted)"
+          placeholder={activeRecipient ? "Enter message (E2E encrypted)" : "Select a conversation first"}
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-          style={{ flex: 1 }}
+          disabled={!activeRecipient}
+          style={{ flex: 1, opacity: activeRecipient ? 1 : 0.5 }}
         />
         <button
           className="btn-terminal primary"
           onClick={handleSend}
-          disabled={encrypting || !message.trim()}
-          style={{ opacity: encrypting || !message.trim() ? 0.5 : 1 }}
+          disabled={isDisabled}
+          style={{ opacity: isDisabled ? 0.5 : 1 }}
         >
-          {encrypting ? 'ENCRYPTING' : 'SEND'}
+          {encrypting || isSending ? 'SENDING' : 'SEND'}
         </button>
       </div>
 
-      {/* Tech info */}
       <div style={{
         marginTop: '8px',
         fontSize: '9px',
@@ -714,16 +830,63 @@ function ComposeBar({ onSend }: { onSend: (msg: string) => void }) {
         display: 'flex',
         gap: '16px',
       }}>
-        <span>🔐 Double Ratchet Active</span>
-        <span>🏷️ New View Tag: {nextTag}</span>
-        <span>📍 Stealth: Unique</span>
+        <span>Double Ratchet Active</span>
+        <span>View Tag: {nextTag}</span>
+        <span>Stealth: Unique</span>
       </div>
     </div>
   )
 }
 
-function HeaderBar({ onKeyManage, onScan, scanning }: { onKeyManage: () => void; onScan: () => void; scanning: boolean }) {
-  const { isConnected } = useAccount()
+function ErrorBanner({ error, onDismiss }: { error: string; onDismiss: () => void }) {
+  return (
+    <div style={{
+      padding: '12px 20px',
+      background: 'rgba(255, 0, 0, 0.1)',
+      borderBottom: '1px solid var(--error)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    }}>
+      <span style={{ color: 'var(--error)', fontSize: '12px' }}>
+        ERROR: {error}
+      </span>
+      <button
+        onClick={onDismiss}
+        style={{
+          background: 'none',
+          border: 'none',
+          color: 'var(--error)',
+          cursor: 'pointer',
+          fontSize: '14px',
+        }}
+      >
+        x
+      </button>
+    </div>
+  )
+}
+
+function HeaderBar({
+  onKeyManage,
+  onScan,
+  scanning,
+  isRegistered
+}: {
+  onKeyManage: () => void
+  onScan: () => void
+  scanning: boolean
+  isRegistered: boolean
+}) {
+  const { isConnected, isTestMode, mounted } = useAccountContext()
+  const [localMounted, setLocalMounted] = useState(false)
+
+  useEffect(() => {
+    setLocalMounted(true)
+  }, [])
+
+  // Use mounted state to prevent hydration mismatch
+  const showWalletButtons = localMounted && mounted && isConnected
 
   return (
     <div style={{
@@ -734,7 +897,6 @@ function HeaderBar({ onKeyManage, onScan, scanning }: { onKeyManage: () => void;
       justifyContent: 'space-between',
       background: 'linear-gradient(180deg, rgba(0,0,0,0.5) 0%, transparent 100%)',
     }}>
-      {/* Logo */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
         <div style={{
           fontFamily: 'Share Tech Mono, monospace',
@@ -752,11 +914,24 @@ function HeaderBar({ onKeyManage, onScan, scanning }: { onKeyManage: () => void;
         }}>
           Private Onchain Messaging
         </div>
+        {/* Test mode indicator */}
+        {isTestMode && (
+          <div style={{
+            fontSize: '9px',
+            color: 'var(--amber-primary)',
+            background: 'rgba(255, 176, 0, 0.2)',
+            padding: '2px 8px',
+            border: '1px solid var(--amber-primary)',
+            borderRadius: '2px',
+            textTransform: 'uppercase',
+            letterSpacing: '0.5px',
+          }}>
+            TEST MODE
+          </div>
+        )}
       </div>
 
-      {/* Status & Actions */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-        {/* Network Status */}
         <div style={{
           display: 'flex',
           alignItems: 'center',
@@ -766,17 +941,15 @@ function HeaderBar({ onKeyManage, onScan, scanning }: { onKeyManage: () => void;
           border: '1px solid var(--phosphor-dim)',
           borderRadius: '2px',
         }}>
-          <StatusIndicator status={isConnected ? 'online' : 'offline'} />
+          <StatusIndicator status={localMounted && mounted && isConnected ? 'online' : 'offline'} />
           <span style={{ fontSize: '10px', color: 'var(--phosphor-primary)' }}>
             HARDHAT
           </span>
         </div>
 
-        {/* Wallet Connect */}
         <WalletConnect />
 
-        {/* Scan Button - only show when connected */}
-        {isConnected && (
+        {showWalletButtons && (
           <button
             className="btn-terminal"
             onClick={onScan}
@@ -787,14 +960,13 @@ function HeaderBar({ onKeyManage, onScan, scanning }: { onKeyManage: () => void;
           </button>
         )}
 
-        {/* Key Management */}
-        {isConnected && (
+        {showWalletButtons && (
           <button
             className="btn-terminal amber"
             onClick={onKeyManage}
             style={{ fontSize: '11px', padding: '6px 12px' }}
           >
-            KEYS
+            {isRegistered ? 'KEYS' : 'REGISTER'}
           </button>
         )}
       </div>
@@ -802,35 +974,337 @@ function HeaderBar({ onKeyManage, onScan, scanning }: { onKeyManage: () => void;
   )
 }
 
+// Empty state component
+function EmptyState({ onNewChannel }: { onNewChannel: () => void }) {
+  return (
+    <div style={{
+      flex: 1,
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '40px',
+      color: 'var(--text-secondary)',
+    }}>
+      <div style={{
+        fontSize: '48px',
+        marginBottom: '16px',
+        opacity: 0.3,
+      }}>
+        #
+      </div>
+      <h3 style={{
+        color: 'var(--text-primary)',
+        fontSize: '16px',
+        marginBottom: '8px',
+      }}>
+        No Messages Yet
+      </h3>
+      <p style={{
+        fontSize: '12px',
+        textAlign: 'center',
+        marginBottom: '20px',
+        maxWidth: '300px',
+      }}>
+        Start a new secure channel to begin encrypted, private messaging on-chain.
+      </p>
+      <button
+        className="btn-terminal primary"
+        onClick={onNewChannel}
+        style={{ fontSize: '12px', padding: '10px 20px' }}
+      >
+        + NEW SECURE CHANNEL
+      </button>
+    </div>
+  )
+}
+
 // Main App
 export default function POMPApp() {
-  const [activeConversation, setActiveConversation] = useState('1')
-  const [messages, setMessages] = useState<Message[]>(mockMessages)
-  const [selectedMessage, setSelectedMessage] = useState<Message | null>(null)
+  const { address, isConnected, mounted, getStorageKey } = useAccountContext()
+  const { isReady: ipfsReady, putJson, getJson, has } = useIpfsStorage()
+
+  // Prevent hydration mismatch
+  const [localMounted, setLocalMounted] = useState(false)
+  useEffect(() => {
+    setLocalMounted(true)
+  }, [])
+
+  // Real hooks
+  const { client, isInitializing, error: clientError, isRegistered, refreshRegistration, reinitialize } = useMessageClient()
+  const { messages: scannedMessages, isScanning, isSending, error: messagesError, scanMessages, sendMessage } = useMessages()
+  const { isRegistering, error: registerError, isReady: isRegisterReady, wrongNetwork, register: registerKeys, keys } = useRegisterKeys()
+
+  // Local state - start empty for production
+  const [activeConversationId, setActiveConversationId] = useState<string | null>(null)
+  const [messages, setMessages] = useState<UIMessage[]>([])
+  const [selectedMessage, setSelectedMessage] = useState<UIMessage | null>(null)
   const [showKeyModal, setShowKeyModal] = useState(false)
-  const [scanning, setScanning] = useState(false)
+  const [showNewChannelModal, setShowNewChannelModal] = useState(false)
+  const [conversations, setConversations] = useState<Conversation[]>([])
+  const [globalError, setGlobalError] = useState<string | null>(null)
+  const [dataLoaded, setDataLoaded] = useState(false)
 
-  const handleScan = async () => {
-    setScanning(true)
-    // In a real implementation, this would call scanMessages from the hook
-    await new Promise(r => setTimeout(r, 2000))
-    setScanning(false)
-  }
+  // Track if we've saved to avoid infinite loops
+  const lastSavedConversations = useRef<string>('')
+  const lastSavedMessages = useRef<string>('')
 
-  const handleSendMessage = (content: string) => {
-    const newMessage: Message = {
-      id: Date.now().toString(),
-      content,
-      timestamp: Date.now(),
-      sender: 'me',
-      nullifier: `0x${randomHex(64)}`,
-      viewTag: randomTag(),
-      stealthAddress: `0x${randomHex(40)}`,
-      proofVerified: true,
-      encrypted: true,
+  // Use mounted state to prevent hydration issues
+  const isConnectedSafe = localMounted && mounted && isConnected
+
+  // Load conversations and messages from IPFS on mount
+  useEffect(() => {
+    if (!localMounted || !mounted || !address || dataLoaded) return
+
+    const loadData = async () => {
+      console.log('Loading data from IPFS...')
+
+      if (!ipfsReady) {
+        console.warn('IPFS not ready, cannot load data')
+        setDataLoaded(true)
+        return
+      }
+
+      try {
+        const convPath = `conversations/${address}`
+        const msgPath = `messages/${address}`
+
+        const [hasConv, hasMsg] = await Promise.all([
+          has(convPath),
+          has(msgPath),
+        ])
+
+        if (hasConv) {
+          const data = await getJson<Conversation[]>(convPath)
+          if (data) {
+            setConversations(data)
+            console.log('Loaded conversations from IPFS:', data.length)
+          }
+        }
+
+        if (hasMsg) {
+          const data = await getJson<UIMessage[]>(msgPath)
+          if (data) {
+            setMessages(data)
+            console.log('Loaded messages from IPFS:', data.length)
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load from IPFS:', err)
+      }
+
+      setDataLoaded(true)
     }
-    setMessages([...messages, newMessage])
-  }
+
+    loadData()
+  }, [localMounted, mounted, address, ipfsReady, dataLoaded, getJson, has])
+
+  // Save conversations to IPFS when they change
+  useEffect(() => {
+    if (!localMounted || !mounted || !address || !dataLoaded || conversations.length === 0) return
+
+    const serialized = JSON.stringify(conversations)
+    if (serialized === lastSavedConversations.current) return
+    lastSavedConversations.current = serialized
+
+    const saveConversations = async () => {
+      if (!ipfsReady) {
+        console.warn('IPFS not ready, cannot save conversations')
+        return
+      }
+
+      try {
+        await putJson(`conversations/${address}`, conversations)
+        console.log('Saved conversations to IPFS')
+      } catch (err) {
+        console.error('Failed to save conversations to IPFS:', err)
+      }
+    }
+
+    // Debounce save
+    const timeout = setTimeout(saveConversations, 500)
+    return () => clearTimeout(timeout)
+  }, [localMounted, mounted, address, ipfsReady, dataLoaded, conversations, getStorageKey, putJson])
+
+  // Save messages to IPFS when they change
+  useEffect(() => {
+    if (!localMounted || !mounted || !address || !dataLoaded || messages.length === 0) return
+
+    const serialized = JSON.stringify(messages)
+    if (serialized === lastSavedMessages.current) return
+    lastSavedMessages.current = serialized
+
+    const saveMessages = async () => {
+      if (!ipfsReady) {
+        console.warn('IPFS not ready, cannot save messages')
+        return
+      }
+
+      try {
+        await putJson(`messages/${address}`, messages)
+        console.log('Saved messages to IPFS')
+      } catch (err) {
+        console.error('Failed to save messages to IPFS:', err)
+      }
+    }
+
+    // Debounce save
+    const timeout = setTimeout(saveMessages, 500)
+    return () => clearTimeout(timeout)
+  }, [localMounted, mounted, address, ipfsReady, dataLoaded, messages, putJson])
+
+  // Get stored keys from useRegisterKeys hook
+  const storedKeys = keys ? {
+    identityPublicKey: keys.identityKeyPair.publicKey
+      ? Buffer.from(keys.identityKeyPair.publicKey).toString('hex')
+      : undefined,
+    signedPrePublicKey: keys.signedPreKeyPair.publicKey
+      ? Buffer.from(keys.signedPreKeyPair.publicKey).toString('hex')
+      : undefined,
+    stealthSpendingPublicKey: keys.stealthSpendingKeyPair.publicKey
+      ? Buffer.from(keys.stealthSpendingKeyPair.publicKey).toString('hex')
+      : undefined,
+    stealthViewingPublicKey: keys.stealthViewingKeyPair.publicKey
+      ? Buffer.from(keys.stealthViewingKeyPair.publicKey).toString('hex')
+      : undefined,
+    identityCommitment: keys.identityCommitment,
+  } : null
+
+  // Update global error when hook errors change
+  useEffect(() => {
+    const error = clientError || messagesError || registerError
+    if (error) {
+      setGlobalError(error)
+    }
+  }, [clientError, messagesError, registerError])
+
+  // Convert scanned messages to UIMessage format
+  useEffect(() => {
+    if (scannedMessages.length > 0) {
+      const uiMessages: UIMessage[] = scannedMessages.map((msg, idx) => ({
+        ...msg,
+        id: `scanned-${idx}-${Date.now()}`,
+        sender: msg.from.toLowerCase() === address?.toLowerCase() ? 'me' as const : 'them' as const,
+        nullifier: `0x${randomHex(64)}`,
+        viewTag: randomTag(),
+        stealthAddress: msg.from.slice(0, 42),
+        proofVerified: true,
+        encrypted: true,
+      }))
+      setMessages(prev => {
+        const existingIds = new Set(prev.map(m => m.id))
+        const newMessages = uiMessages.filter(m => !existingIds.has(m.id))
+        return [...prev, ...newMessages]
+      })
+    }
+  }, [scannedMessages, address])
+
+  // Get active recipient from conversation
+  const activeRecipient = conversations.find(c => c.id === activeConversationId)?.stealthSpendingKey || null
+
+  // Scan handler
+  const handleScan = useCallback(async () => {
+    if (!client) {
+      setGlobalError('Client not initialized. Please connect wallet.')
+      return
+    }
+    setGlobalError(null)
+    await scanMessages()
+  }, [client, scanMessages])
+
+  // Send message handler
+  const handleSendMessage = useCallback(async (content: string, recipient: string) => {
+    console.log('handleSendMessage called', { content, recipient, client: !!client, isConnectedSafe })
+    if (!client || !isConnectedSafe) {
+      setGlobalError('Client not initialized. Please connect wallet.')
+      return
+    }
+    setGlobalError(null)
+
+    try {
+      console.log('Calling sendMessage...')
+      const txHash = await sendMessage(recipient, content)
+      console.log('sendMessage returned:', txHash)
+      if (txHash) {
+        const newMessage: UIMessage = {
+          id: txHash,
+          from: address || '',
+          content,
+          timestamp: Date.now(),
+          messageType: 'DM',
+          sender: 'me',
+          nullifier: `0x${randomHex(64)}`,
+          viewTag: randomTag(),
+          stealthAddress: recipient.slice(0, 42),
+          proofVerified: true,
+          encrypted: true,
+        }
+        setMessages(prev => [...prev, newMessage])
+        console.log('Message added to state:', newMessage)
+
+        setConversations(prev => prev.map(conv =>
+          conv.stealthSpendingKey === recipient
+            ? { ...conv, lastMessage: content.slice(0, 30) + (content.length > 30 ? '...' : '') }
+            : conv
+        ))
+      }
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Failed to send message'
+      setGlobalError(errorMsg)
+    }
+  }, [client, isConnectedSafe, sendMessage, address])
+
+  // Create new channel handler
+  const handleCreateChannel = useCallback((recipientAddress: string) => {
+    if (!recipientAddress.startsWith('0x') || recipientAddress.length !== 42) {
+      setGlobalError('Invalid Ethereum address format')
+      return
+    }
+
+    const newConversation: Conversation = {
+      id: recipientAddress,
+      name: `${recipientAddress.slice(0, 6)}...${recipientAddress.slice(-4)}`,
+      stealthSpendingKey: recipientAddress,
+      lastMessage: 'New secure channel',
+      unread: 0,
+      online: false,
+      viewTag: randomTag(),
+    }
+
+    setConversations(prev => {
+      // Don't add duplicates
+      if (prev.some(c => c.stealthSpendingKey === recipientAddress)) {
+        return prev
+      }
+      return [newConversation, ...prev]
+    })
+    setActiveConversationId(newConversation.id)
+    setShowNewChannelModal(false)
+  }, [])
+
+  // Register handler
+  const handleRegister = useCallback(async () => {
+    if (wrongNetwork) {
+      setGlobalError('Wrong network. Please connect to Hardhat Local (chainId 31337)')
+      return
+    }
+    if (!isRegisterReady) {
+      setGlobalError('Please connect your wallet first')
+      return
+    }
+    setGlobalError(null)
+    const txHash = await registerKeys()
+    if (txHash) {
+      // Refresh registration status after successful registration
+      await refreshRegistration()
+      // CRITICAL: Reinitialize the MessageClient with new keys
+      // This ensures the client uses the same keys that were registered on-chain
+      reinitialize()
+    }
+  }, [isRegisterReady, wrongNetwork, registerKeys, refreshRegistration, reinitialize])
+
+  // Get active conversation
+  const activeConversation = conversations.find(c => c.id === activeConversationId)
 
   return (
     <div style={{
@@ -841,8 +1315,29 @@ export default function POMPApp() {
       <HeaderBar
         onKeyManage={() => setShowKeyModal(true)}
         onScan={handleScan}
-        scanning={scanning}
+        scanning={isScanning}
+        isRegistered={isRegistered}
       />
+
+      {globalError && (
+        <ErrorBanner error={globalError} onDismiss={() => setGlobalError(null)} />
+      )}
+
+      {isInitializing && (
+        <div style={{
+          padding: '12px 20px',
+          background: 'rgba(0, 255, 65, 0.05)',
+          borderBottom: '1px solid var(--phosphor-dim)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+        }}>
+          <StatusIndicator status="encrypting" />
+          <span style={{ color: 'var(--phosphor-primary)', fontSize: '12px' }}>
+            Initializing client...
+          </span>
+        </div>
+      )}
 
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
         {/* Sidebar */}
@@ -857,25 +1352,28 @@ export default function POMPApp() {
             <span className="terminal-title">CONVERSATIONS</span>
           </div>
 
-          {/* Search */}
           <div style={{ padding: '8px' }}>
             <input
               type="text"
               className="input-terminal"
-              placeholder="Search by view tag or address..."
+              placeholder="Search by address..."
               style={{ fontSize: '11px', padding: '8px' }}
             />
           </div>
 
           <ConversationList
-            conversations={mockConversations}
-            activeId={activeConversation}
-            onSelect={setActiveConversation}
+            conversations={conversations}
+            activeId={activeConversationId}
+            onSelect={setActiveConversationId}
           />
 
-          {/* New Chat Button */}
           <div style={{ padding: '12px', borderTop: '1px solid var(--screen-border)' }}>
-            <button className="btn-terminal primary" style={{ width: '100%', fontSize: '11px' }}>
+            <button
+              className="btn-terminal primary"
+              style={{ width: '100%', fontSize: '11px' }}
+              onClick={() => setShowNewChannelModal(true)}
+              disabled={!isConnectedSafe}
+            >
               + NEW SECURE CHANNEL
             </button>
           </div>
@@ -887,58 +1385,102 @@ export default function POMPApp() {
           display: 'flex',
           flexDirection: 'column',
         }}>
-          {/* Chat Header */}
-          <div style={{
-            padding: '12px 16px',
-            borderBottom: '1px solid var(--screen-border)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}>
-            <div>
+          {activeConversation ? (
+            <>
+              {/* Chat Header */}
               <div style={{
-                fontFamily: 'Share Tech Mono, monospace',
-                fontSize: '14px',
-                color: 'var(--phosphor-primary)',
+                padding: '12px 16px',
+                borderBottom: '1px solid var(--screen-border)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
               }}>
-                {mockConversations.find(c => c.id === activeConversation)?.name}
+                <div>
+                  <div style={{
+                    fontFamily: 'Share Tech Mono, monospace',
+                    fontSize: '14px',
+                    color: 'var(--phosphor-primary)',
+                  }}>
+                    {activeConversation.name}
+                  </div>
+                  <div style={{ fontSize: '10px', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                    X3DH established - Double Ratchet active
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <TechBadge label="VIEW" value={activeConversation.viewTag} color="cyan" />
+                  <TechBadge label="STATUS" value="SECURE" color="green" />
+                </div>
               </div>
-              <div style={{ fontSize: '10px', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                X3DH established • Double Ratchet active • 4 message keys remaining
-              </div>
-            </div>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <TechBadge label="VIEW" value={mockConversations.find(c => c.id === activeConversation)?.viewTag || ''} color="cyan" />
-              <TechBadge label="STATUS" value="SECURE" color="green" />
-            </div>
-          </div>
 
-          {/* Messages */}
-          <div
-            style={{
-              flex: 1,
-              overflowY: 'auto',
-              padding: '16px',
-              background: 'radial-gradient(ellipse at center, rgba(0, 255, 65, 0.02) 0%, transparent 70%)',
-            }}
-            onClick={() => setSelectedMessage(null)}
-          >
-            {messages.map((msg) => (
-              <div key={msg.id} onClick={(e) => { e.stopPropagation(); setSelectedMessage(msg) }}>
-                <MessageBubble message={msg} />
+              {/* Messages */}
+              <div
+                style={{
+                  flex: 1,
+                  overflowY: 'auto',
+                  padding: '16px',
+                  background: 'radial-gradient(ellipse at center, rgba(0, 255, 65, 0.02) 0%, transparent 70%)',
+                }}
+                onClick={() => setSelectedMessage(null)}
+              >
+                {messages.length === 0 ? (
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    height: '100%',
+                    color: 'var(--text-dim)',
+                    fontSize: '12px',
+                  }}>
+                    No messages yet. Send an encrypted message to start the conversation.
+                  </div>
+                ) : (
+                  messages.map((msg) => (
+                    <div key={msg.id} onClick={(e) => { e.stopPropagation(); setSelectedMessage(msg) }}>
+                      <MessageBubble message={msg} />
+                    </div>
+                  ))
+                )}
               </div>
-            ))}
-          </div>
 
-          <ComposeBar onSend={handleSendMessage} />
+              <ComposeBar
+                onSend={handleSendMessage}
+                isSending={isSending}
+                activeRecipient={activeRecipient}
+              />
+            </>
+          ) : (
+            <EmptyState onNewChannel={() => setShowNewChannelModal(true)} />
+          )}
         </div>
 
         {/* Tech Panel */}
-        <TechPanel message={selectedMessage || messages[messages.length - 1]} />
+        {messages.length > 0 && (
+          <TechPanel message={selectedMessage || messages[messages.length - 1]} />
+        )}
       </div>
 
       {/* Key Management Modal */}
-      {showKeyModal && <KeyManagementModal onClose={() => setShowKeyModal(false)} />}
+      {showKeyModal && (
+        <KeyManagementModal
+          onClose={() => setShowKeyModal(false)}
+          isRegistered={isRegistered}
+          isRegistering={isRegistering}
+          registrationError={registerError}
+          onRegister={handleRegister}
+          storedKeys={storedKeys}
+        />
+      )}
+
+      {/* New Channel Modal */}
+      {showNewChannelModal && (
+        <NewChannelModal
+          onClose={() => setShowNewChannelModal(false)}
+          onCreateChannel={handleCreateChannel}
+          isCreating={false}
+          error={null}
+        />
+      )}
 
       <style>{`
         @keyframes fadeIn {

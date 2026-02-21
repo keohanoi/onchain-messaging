@@ -12,7 +12,8 @@ export interface EncryptedMetadata {
   recipientStealth: string;
   senderIdentityKey: string;
   senderEphemeralKey: string;
-  contentCid: string;
+  contentCid?: string;  // Optional - can use contentData instead
+  contentData?: string;  // Base64 encoded encrypted content (alternative to CID)
   contentKey?: string;
   contentKeyHash?: string;
   contentIv: string;
